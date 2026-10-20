@@ -1,62 +1,42 @@
-#!/bin/env python
-"""The main entry point for the bot."""
-from contextlib import contextmanager
+import os
+import logging
+import asyncio
+from telegram import Update
+from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 
-import typer
-from sqlalchemy_utils.functions import database_exists, create_database, drop_database
+# Configurar logs para ver el estado del bot en la consola
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.INFO
+)
+logger = logging.getLogger(__name__)
 
-from archivebot.db import engine, base
-from archivebot.models import *  # noqa
-from archivebot.archivebot import main
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Comando /start que da la bienvenida al usuario."""
+    user = update.effective_user
+    await update.message.reply_text(
+        f"¡Hola, {user.first_name}! 👋\n\n"
+        "Bienvenido a **ArchiveBot Pro**. Tu herramienta definitiva para respaldar chats y contenido de Telegram.\n\n"
+        "👇 Presiona el botón del menú abajo para abrir el panel de control y comenzar."
+    )
 
-cli = typer.Typer()
+def main():
+    # Token de tu bot de Telegram (puedes ingresarlo directamente aquí o usar variables de entorno)
+    # Reemplaza 'TU_TOKEN_AQUI' con el token que te dio BotFather
+    TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "TU_TOKEN_AQUI")
 
+    if TOKEN == "TU_TOKEN_AQUI":
+        logger.warning("⚠️ ADVERTENCIA: No has configurado el Token del bot. Recuerda agregarlo.")
 
-@contextmanager
-def wrap_echo(msg: str):
-    typer.echo(f"{msg}... ", nl=False)
-    yield
-    typer.echo("done.")
+    # Construir la aplicación del bot
+    application = ApplicationBuilder().token(TOKEN).build()
 
+    # Registrar el comando /start
+    application.add_handler(CommandHandler("start", start))
 
-@cli.command()
-def initdb(exist_ok: bool = False, drop_existing: bool = False):
-    """Set up the database.
+    # Iniciar el bot en modo Polling
+    logger.info("🤖 ArchiveBot Pro iniciado correctamente y escuchando...")
+    application.run_polling()
 
-    Can be used to remove an existing database.
-    """
-    db_url = engine.url
-    typer.echo(f"Using database at {db_url}")
-
-    if database_exists(db_url):
-        if drop_existing:
-            with wrap_echo("Dropping database"):
-                drop_database(db_url)
-        elif not exist_ok:
-            typer.echo(
-                "Database already exists, aborting.\n"
-                "Use --exist-ok if you are sure the database is uninitialized and contains no data.\n"
-                "Use --drop-existing if you want to recreate it.",
-                err=True,
-            )
-            return
-
-    with wrap_echo("Creating database"):
-        create_database(db_url)
-        pass
-
-    with wrap_echo("Creating metadata"):
-        base.metadata.create_all()
-        pass
-
-    typer.echo("Database initialization complete.")
-
-
-@cli.command()
-def run():
-    """Actually start the bot."""
+if __name__ == '__main__':
     main()
-
-
-if __name__ == "__main__":
-    cli()
