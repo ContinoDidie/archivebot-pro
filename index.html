@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArchiveBot Pro - Panel</title>
+  <!-- SDK oficial de Telegram WebApps -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: var(--tg-theme-bg-color, #18222d);
+      --text-color: var(--tg-theme-text-color, #ffffff);
+      --button-color: var(--tg-theme-button-color, #2ea6ff);
+      --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+      --card-bg: var(--tg-theme-secondary-bg-color, #212d3b);
+      --hint-color: var(--tg-theme-hint-color, #7f91a4);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: var(--button-color);
+    }
+
+    .status-box {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+
+    .progress-bar-bg {
+      background-color: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      height: 12px;
+      width: 100%;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+
+    .progress-bar-fill {
+      background-color: var(--button-color);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+    }
+
+    .btn {
+      width: 100%;
+      background-color: var(--button-color);
+      color: var(--button-text-color);
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 15px;
+      cursor: pointer;
+      margin-top: 8px;
+    }
+
+    .btn-secondary {
+      background-color: transparent;
+      border: 1px solid var(--button-color);
+      color: var(--button-color);
+    }
+
+    .plan-badge {
+      font-size: 12px;
+      background: rgba(46, 166, 255, 0.15);
+      color: var(--button-color);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tarjeta de Estado del Respaldo -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h2>📦 ArchiveBot Pro</h2>
+      <span class="plan-badge">Plan Gratuito</span>
+    </div>
+    
+    <div class="status-box">
+      <span>Estado:</span>
+      <strong id="status-text">Listo para escanear</strong>
+    </div>
+
+    <div class="progress-bar-bg">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+
+    <div class="status-box" style="color: var(--hint-color); font-size: 12px;">
+      <span>Archivos encontrados: <b id="file-count">0</b></span>
+      <span>Tamaño: <b id="total-size">0 MB</b></span>
+    </div>
+  </div>
+
+  <!-- Filtros de Archivos -->
+  <div class="card">
+    <h2>🎯 ¿Qué deseas respaldar?</h2>
+    <div class="options-grid">
+      <label class="option-item"><input type="checkbox" checked id="chk-photos"> 📷 Fotos</label>
+      <label class="option-item"><input type="checkbox" checked id="chk-videos"> 🎥 Videos</label>
+      <label class="option-item"><input type="checkbox" checked id="chk-docs"> 📄 Documentos</label>
+      <label class="option-item"><input type="checkbox" id="chk-audio"> 🎵 Audios</label>
+    </div>
+    <button class="btn" id="btn-start" onclick="iniciarRespaldo()">⚡ Iniciar Respaldo ZIP</button>
+  </div>
+
+  <!-- Plan Pro & Monetización -->
+  <div class="card" style="text-align: center;">
+    <h2>⭐ Límite del Plan</h2>
+    <p style="font-size: 13px; color: var(--hint-color);">
+      Has utilizado 0 MB de 500 MB disponibles hoy.
+    </p>
+    <button class="btn btn-secondary" onclick="comprarPro()">
+      ⭐ Obtener Acceso Ilimitado con Telegram Stars
+    </button>
+  </div>
+
+  <script>
+    // Inicializar SDK de Telegram
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Expandir la ventana al tamaño máximo
+
+    function iniciarRespaldo() {
+      document.getElementById('status-text').innerText = "Escaneando chat...";
+      document.getElementById('btn-start').disabled = true;
+      document.getElementById('btn-start').innerText = "Procesando...";
+
+      // Simulación de progreso
+      let progreso = 0;
+      let interval = setInterval(() => {
+        progreso += 10;
+        document.getElementById('progress-fill').style.width = progreso + '%';
+        document.getElementById('file-count').innerText = Math.floor(progreso * 1.5);
+        document.getElementById('total-size').innerText = (progreso * 4.2).toFixed(1) + ' MB';
+
+        if (progreso >= 100) {
+          clearInterval(interval);
+          document.getElementById('status-text').innerText = "✅ ¡Respaldo completado!";
+          document.getElementById('btn-start').disabled = false;
+          document.getElementById('btn-start').innerText = "📥 Descargar Archivo ZIP";
+          
+          // Enviar datos de vuelta al bot de Telegram
+          tg.sendData(JSON.stringify({ action: "download_complete", size_mb: 420 }));
+        }
+      }, 500);
+    }
+
+    function comprarPro() {
+      tg.showAlert("Proximamente podrás suscribirte usando Telegram Stars.");
+    }
+  </script>
+</body>
+</html>
