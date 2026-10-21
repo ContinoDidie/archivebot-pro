@@ -1,8 +1,9 @@
-python-telegram-bot==20.8
-telethon==1.34.0
-SQLAlchemy==2.0.25
-sqlalchemy-utils==0.41.2
-toml==0.10.2
-typer==0.9.0
-greenlet==3.0.3
-raven==6.10.0
+Telethon>=1.28,<2.0
+SQLAlchemy>=1.4,<2.1
+SQLAlchemy-Utils>=0.37
+toml>=0.10
+cryptg>=0.2
+raven>=6.10
+typer>=0.6
+Flask>=3.0,<4.0
+gunicorn>=21.2
