@@ -1,586 +1,584 @@
-```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ArchiveBot Pro MiniApp</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        telegram: {
-                            bg: '#0f1721',
-                            card: '#161d27',
-                            cardHover: '#1c2533',
-                            border: '#232e3c',
-                            blue: '#0088cc',
-                            blueHover: '#0077b3',
-                            accent: '#2AABEE',
-                            textMuted: '#707e94',
-                            star: '#eac54f'
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-    <!-- Telegram WebApp SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body {
-            background-color: #0f1721;
-            color: #ffffff;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            user-select: none;
-            -webkit-user-select: none;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArchiveBot Pro</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --card-hover: #273548;
+      --accent-color: #0088cc;
+      --accent-hover: #0077b5;
+      --text-main: #f8fafc;
+      --text-secondary: #94a3b8;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --success-color: #22c55e;
+    }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 4px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #161d27;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #232e3c;
-            border-radius: 4px;
-        }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
 
-        /* Custom Checkbox Animation */
-        .custom-checkbox {
-            appearance: none;
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #3a4b5f;
-            border-radius: 6px;
-            background-color: transparent;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-        }
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
 
-        .custom-checkbox:checked {
-            background-color: #0088cc;
-            border-color: #0088cc;
-        }
+    .app-container {
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
 
-        .custom-checkbox:checked::after {
-            content: '\f00c';
-            font-family: 'Font Awesome 6 Free';
-            font-weight: 900;
-            color: #ffffff;
-            font-size: 11px;
-        }
+    /* Tarjeta de Estado */
+    .status-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
 
-        /* Card selection glow */
-        .item-card {
-            transition: all 0.2s ease;
-            border: 1px solid #232e3c;
-        }
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
 
-        .item-card.selected {
-            border-color: #0088cc;
-            background-color: #1a2736;
-        }
+    .bot-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-        /* Shimmer effect for progress bar */
-        @keyframes shimmer {
-            0% { background-position: -200% 0; }
-            100% { background-position: 200% 0; }
-        }
+    .plan-badge {
+      background: rgba(0, 136, 204, 0.15);
+      color: var(--accent-color);
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 20px;
+      font-weight: 600;
+    }
 
-        .animated-bar {
-            background: linear-gradient(90deg, #0088cc 25%, #2AABEE 50%, #0088cc 75%);
-            background-size: 200% 100%;
-            animation: shimmer 2.5s infinite;
-        }
+    .status-text {
+      font-size: 0.9rem;
+      color: var(--success-color);
+      margin-bottom: 8px;
+      font-weight: 500;
+    }
 
-        /* Modal backdrop blur */
-        .modal-backdrop {
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-        }
-    </style>
+    .progress-bar-bg {
+      background: #0f172a;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar-fill {
+      background: var(--accent-color);
+      height: 100%;
+      width: 100%;
+      border-radius: 4px;
+    }
+
+    .status-details {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    /* Sección de Categorías */
+    .section-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text-main);
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .category-btn {
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .category-btn:hover {
+      background: var(--card-hover);
+      border-color: var(--accent-color);
+    }
+
+    .category-btn.active {
+      border-color: var(--accent-color);
+      background: rgba(0, 136, 204, 0.1);
+    }
+
+    /* Menú Dinámico de Selección de Archivos */
+    .file-explorer {
+      display: none;
+      margin-top: 14px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 14px;
+    }
+
+    .file-explorer.visible {
+      display: block;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .explorer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .explorer-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+
+    .explorer-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-link {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+
+    .action-link:hover {
+      color: var(--text-main);
+    }
+
+    /* Barra de Búsqueda */
+    .search-box {
+      position: relative;
+      margin-bottom: 10px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: #0f172a;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 10px 8px 32px;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-color);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    /* Lista de Archivos */
+    .file-list {
+      max-height: 200px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      background: #0f172a;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .file-item:hover {
+      background: var(--card-hover);
+    }
+
+    .file-checkbox {
+      margin-right: 10px;
+      accent-color: var(--accent-color);
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .file-info {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+      overflow: hidden;
+    }
+
+    .file-name {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .file-size {
+      font-size: 0.7rem;
+      color: var(--text-secondary);
+    }
+
+    /* Botón de Descarga Global */
+    .btn-download {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3);
+      margin-top: 4px;
+    }
+
+    .btn-download:hover {
+      background: var(--accent-hover);
+    }
+
+    /* Footer Límite */
+    .limit-card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      text-align: center;
+    }
+
+    .limit-text {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
+
+    .btn-stars {
+      background: transparent;
+      border: 1px solid var(--accent-color);
+      color: var(--accent-color);
+      width: 100%;
+      padding: 10px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-stars:hover {
+      background: rgba(0, 136, 204, 0.1);
+    }
+  </style>
 </head>
-<body class="p-3 sm:p-5 max-w-md mx-auto min-h-screen flex flex-col justify-between select-none">
+<body>
 
-    <!-- Top Toast Notification -->
-    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-telegram-blue text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center space-x-2">
-        <i class="fa-solid fa-circle-info"></i>
-        <span id="toastMsg">Notificación</span>
+  <div class="app-container">
+    
+    <!-- Estado General -->
+    <div class="status-card">
+      <div class="status-header">
+        <div class="bot-title">📦 ArchiveBot Pro</div>
+        <span class="plan-badge">Plan Gratuito</span>
+      </div>
+      <div class="status-text">✅ ¡Escaneo completado!</div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill"></div>
+      </div>
+      <div class="status-details">
+        <span>Archivos encontrados: <strong id="totalFound">150</strong></span>
+        <span>Tamaño total: <strong id="totalWeight">420.0 MB</strong></span>
+      </div>
     </div>
 
-    <!-- MAIN CONTAINER -->
-    <div class="space-y-4 pb-20">
+    <!-- Selección de Categorías y Explorador dinámico -->
+    <div class="section-card">
+      <div class="section-title">🎯 ¿Qué categoría deseas explorar y respaldar?</div>
+      
+      <div class="categories-grid">
+        <button class="category-btn" data-category="photos">
+          <span>🖼️</span> Fotos (75)
+        </button>
+        <button class="category-btn" data-category="videos">
+          <span>🎥</span> Videos (12)
+        </button>
+        <button class="category-btn" data-category="documents">
+          <span>📄</span> Documentos (43)
+        </button>
+        <button class="category-btn" data-category="audios">
+          <span>🎵</span> Audios (20)
+        </button>
+      </div>
 
-        <!-- 1. HEADER & BACKUP STATUS PANEL -->
-        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl">
-            <div class="flex justify-between items-center mb-3">
-                <div class="flex items-center space-x-2">
-                    <div class="text-2xl">📦</div>
-                    <div>
-                        <h1 class="font-bold text-base text-white leading-tight">ArchiveBot Pro</h1>
-                        <p class="text-xs text-telegram-textMuted">Gestor de Respaldos</p>
-                    </div>
-                </div>
-                <span class="bg-telegram-blue/20 text-telegram-accent text-[10px] font-semibold px-2.5 py-1 rounded-full border border-telegram-blue/30">
-                    Plan Gratuito
-                </span>
-            </div>
-
-            <!-- Status Indicator -->
-            <div class="flex justify-between items-center text-xs mb-2">
-                <span class="text-gray-300 font-medium">Estado:</span>
-                <span id="statusBadge" class="text-emerald-400 font-bold flex items-center space-x-1">
-                    <i class="fa-solid fa-square-check"></i>
-                    <span>¡Respaldo completado!</span>
-                </span>
-            </div>
-
-            <!-- Progress Bar -->
-            <div class="w-full bg-telegram-bg rounded-full h-2.5 mb-3 overflow-hidden p-0.5 border border-telegram-border">
-                <div id="progressBar" class="animated-bar h-full rounded-full transition-all duration-500" style="width: 100%;"></div>
-            </div>
-
-            <!-- Quick Stats -->
-            <div class="flex justify-between text-xs text-telegram-textMuted pt-1 border-t border-telegram-border/50">
-                <span>Archivos encontrados: <strong id="statFoundCount" class="text-gray-200">150</strong></span>
-                <span>Tamaño: <strong id="statFoundSize" class="text-gray-200">420.0 MB</strong></span>
-            </div>
+      <!-- Menú Desplegable / Explorador de Archivos -->
+      <div id="fileExplorer" class="file-explorer">
+        <div class="explorer-header">
+          <span class="explorer-title" id="explorerCategoryTitle">Archivos de la categoría</span>
+          <div class="explorer-actions">
+            <button class="action-link" id="selectAllCategory">Marcar todos</button>
+            <button class="action-link" id="deselectAllCategory">Ninguno</button>
+          </div>
         </div>
 
-        <!-- 2. MAIN SELECTION & INTERACTIVE BACKUP PANEL -->
-        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl space-y-4">
-            
-            <div class="flex justify-between items-center">
-                <h2 class="font-bold text-sm text-white flex items-center space-x-2">
-                    <span>🎯</span>
-                    <span>¿Qué deseas respaldar?</span>
-                </h2>
-                <span class="text-[11px] text-telegram-textMuted" id="filteredStats">150 elementos</span>
-            </div>
-
-            <!-- Category Filters -->
-            <div class="grid grid-cols-2 gap-2 text-xs">
-                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
-                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="photo" checked>
-                    <span class="flex items-center space-x-1.5 font-medium">
-                        <span>📷</span>
-                        <span>Fotos</span>
-                    </span>
-                </label>
-                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
-                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="video" checked>
-                    <span class="flex items-center space-x-1.5 font-medium">
-                        <span>🎬</span>
-                        <span>Videos</span>
-                    </span>
-                </label>
-                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
-                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="doc" checked>
-                    <span class="flex items-center space-x-1.5 font-medium">
-                        <span>📄</span>
-                        <span>Documentos</span>
-                    </span>
-                </label>
-                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
-                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="audio" checked>
-                    <span class="flex items-center space-x-1.5 font-medium">
-                        <span>🎵</span>
-                        <span>Audios</span>
-                    </span>
-                </label>
-            </div>
-
-            <!-- VIEW CONTROLS & SELECTION BAR -->
-            <div class="flex justify-between items-center pt-2 border-t border-telegram-border/50">
-                <div class="flex items-center space-x-2">
-                    <button id="btnSelectAll" class="text-[11px] bg-telegram-bg hover:bg-telegram-border text-gray-300 px-2.5 py-1 rounded-lg border border-telegram-border transition">
-                        Seleccionar todo
-                    </button>
-                    <button id="btnDeselectAll" class="text-[11px] bg-telegram-bg hover:bg-telegram-border text-telegram-textMuted px-2.5 py-1 rounded-lg border border-telegram-border transition">
-                        Desmarcar
-                    </button>
-                </div>
-
-                <!-- List/Grid Switcher -->
-                <div class="flex items-center bg-telegram-bg p-0.5 rounded-lg border border-telegram-border">
-                    <button id="btnListView" class="p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition">
-                        <i class="fa-solid fa-list"></i>
-                    </button>
-                    <button id="btnGridView" class="p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition">
-                        <i class="fa-solid fa-border-all"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- DYNAMIC GALLERY CONTAINER -->
-            <div id="galleryContainer" class="space-y-2 max-h-72 overflow-y-auto pr-1">
-                <!-- Dynamic Items will be rendered here via JS -->
-            </div>
-
-            <!-- DOWNLOAD MAIN BUTTON -->
-            <button id="btnDownload" class="w-full bg-telegram-blue hover:bg-telegram-blueHover text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-telegram-blue/20 flex items-center justify-center space-x-2 transition transform active:scale-95">
-                <span class="text-base">👝</span>
-                <span id="btnDownloadText">Descargar Archivo ZIP (0 ítems • 0.0 MB)</span>
-            </button>
+        <!-- Barra de búsqueda instantánea -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="fileSearchInput" class="search-input" placeholder="Buscar por nombre de archivo...">
         </div>
 
-        <!-- 3. PLAN LIMIT & TELEGRAM STARS SECTION -->
-        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl space-y-3 text-center">
-            <h3 class="font-bold text-sm text-white flex items-center justify-center space-x-1.5">
-                <span class="text-telegram-star">⭐</span>
-                <span>Límite del Plan</span>
-            </h3>
-
-            <p class="text-xs text-telegram-textMuted">
-                Has utilizado <strong id="usedQuotaText" class="text-gray-200">0 MB</strong> de <strong class="text-gray-200">500 MB</strong> disponibles hoy.
-            </p>
-
-            <!-- Telegram Stars Upgrade Button -->
-            <button id="btnStarsUpgrade" class="w-full bg-transparent hover:bg-telegram-star/10 border-2 border-telegram-star/60 hover:border-telegram-star text-telegram-star font-bold py-2.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition transform active:scale-95">
-                <i class="fa-solid fa-star text-telegram-star"></i>
-                <span class="text-xs">Obtener Acceso Ilimitado con Telegram Stars</span>
-            </button>
+        <!-- Lista de archivos dinámicos -->
+        <div id="fileListContainer" class="file-list">
+          <!-- Los elementos se cargan por JavaScript según la categoría -->
         </div>
-
+      </div>
     </div>
 
-    <!-- PREVIEW MODAL -->
-    <div id="previewModal" class="fixed inset-0 bg-black/80 modal-backdrop hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-telegram-card border border-telegram-border w-full max-w-sm rounded-2xl p-5 shadow-2xl relative space-y-4">
-            <!-- Close Button -->
-            <button id="btnCloseModal" class="absolute top-3 right-3 text-telegram-textMuted hover:text-white p-2">
-                <i class="fa-solid fa-xmark text-lg"></i>
-            </button>
+    <!-- Botón de Descarga -->
+    <button id="btnDownloadZip" class="btn-download">
+      📥 Descargar ZIP (<span id="selectedCount">0</span> ítems • <span id="selectedSize">0.0</span> MB)
+    </button>
 
-            <!-- Modal Content -->
-            <div class="text-center space-y-3">
-                <div id="modalIconContainer" class="w-20 h-20 bg-telegram-bg rounded-2xl mx-auto flex items-center justify-center text-4xl border border-telegram-border">
-                    🖼️
-                </div>
-                <div>
-                    <h3 id="modalTitle" class="font-bold text-sm text-white truncate max-w-xs mx-auto">Nombre_del_Archivo.jpg</h3>
-                    <p id="modalSub" class="text-xs text-telegram-textMuted mt-0.5">2.4 MB • 21 Oct 2026</p>
-                </div>
-
-                <div class="bg-telegram-bg/80 rounded-xl p-3 text-left space-y-1.5 text-xs border border-telegram-border">
-                    <div class="flex justify-between"><span class="text-telegram-textMuted">Tipo:</span> <span id="modalType" class="text-gray-200 font-medium">Fotografía</span></div>
-                    <div class="flex justify-between"><span class="text-telegram-textMuted">Estado:</span> <span class="text-emerald-400 font-medium">Listo para descarga</span></div>
-                    <div class="flex justify-between"><span class="text-telegram-textMuted">ID Local:</span> <span id="modalId" class="text-gray-400 font-mono">#ARC-9021</span></div>
-                </div>
-
-                <button id="btnModalToggleSelect" class="w-full bg-telegram-blue hover:bg-telegram-blueHover text-white text-xs font-bold py-2.5 rounded-xl transition">
-                    Seleccionar para respaldo
-                </button>
-            </div>
-        </div>
+    <!-- Límite del Plan -->
+    <div class="limit-card">
+      <div class="limit-text">Has utilizado 0 MB de 500 MB disponibles hoy.</div>
+      <button class="btn-stars">⭐ Obtener Acceso Ilimitado con Telegram Stars</button>
     </div>
 
-    <!-- JAVASCRIPT LOGIC -->
-    <script>
-        // Telegram WebApp Initialization
-        const tg = window.Telegram?.WebApp;
-        if (tg) {
-            tg.ready();
-            tg.expand();
-            // Adapt colors if supported
-            if (tg.setHeaderColor) tg.setHeaderColor('#0f1721');
-            if (tg.setBackgroundColor) tg.setBackgroundColor('#0f1721');
-        }
+  </div>
 
-        // Mock Database of Media Items
-        const mediaItems = [
-            { id: 1, name: 'DSC_0041_Vacaciones.jpg', cat: 'photo', icon: '🖼️', size: 2.4, date: '21 Oct' },
-            { id: 2, name: 'Foto_Familia_2026.png', cat: 'photo', icon: '📸', size: 4.1, date: '20 Oct' },
-            { id: 3, name: 'Captura_Pantalla_Telegram.png', cat: 'photo', icon: '🖼️', size: 1.2, date: '19 Oct' },
-            { id: 4, name: 'Video_Aniversario_HD.mp4', cat: 'video', icon: '🎥', size: 45.8, date: '18 Oct' },
-            { id: 5, name: 'Proyecto_Final_Presentacion.mp4', cat: 'video', icon: '🎬', size: 120.5, date: '15 Oct' },
-            { id: 6, name: 'Contrato_Servicios_Firmado.pdf', cat: 'doc', icon: '📄', size: 3.5, date: '21 Oct' },
-            { id: 7, name: 'Resumen_Cuentas_Anual.xlsx', cat: 'doc', icon: '📊', size: 1.8, date: '14 Oct' },
-            { id: 8, name: 'Nota_de_Voz_Reunion.mp3', cat: 'audio', icon: '🎙️', size: 8.4, date: '21 Oct' },
-            { id: 9, name: 'Cancion_Demostrativa.flac', cat: 'audio', icon: '🎵', size: 22.0, date: '10 Oct' },
-            { id: 10, name: 'Foto_Perfil_Pro.jpg', cat: 'photo', icon: '🖼️', size: 3.2, date: '08 Oct' },
-            { id: 11, name: 'Documento_Identidad_Scan.pdf', cat: 'doc', icon: '📝', size: 2.1, date: '05 Oct' },
-            { id: 12, name: 'Video_Clip_Promocional.mov', cat: 'video', icon: '🎥', size: 205.0, date: '01 Oct' }
-        ];
+  <script>
+    // Base de datos simulada de archivos detectados por categoría
+    const mockFilesData = {
+      photos: [
+        { id: 'p1', name: 'Vacaciones_Playa_2026.jpg', size: 3.5 },
+        { id: 'p2', name: 'Cumpleanos_Familia.png', size: 2.1 },
+        { id: 'p3', name: 'Captura_Pantalla_Config.png', size: 1.2 },
+        { id: 'p4', name: 'Atardecer_Monte.jpg', size: 4.8 },
+        { id: 'p5', name: 'Selfie_Oficina.jpg', size: 2.9 }
+      ],
+      videos: [
+        { id: 'v1', name: 'Video_Recuerdo_Aniversario.mp4', size: 45.0 },
+        { id: 'v2', name: 'Clase_Python_Avanzado.mp4', size: 120.5 },
+        { id: 'v3', name: 'Mascota_Jugando_Parque.mp4', size: 18.2 }
+      ],
+      documents: [
+        { id: 'd1', name: 'Contrato_Servicios_2026.pdf', size: 1.5 },
+        { id: 'd2', name: 'Curriculum_Vitae_Actualizado.pdf', size: 0.8 },
+        { id: 'd3', name: 'Presupuesto_Proyecto_Alpha.xlsx', size: 2.4 },
+        { id: 'd4', name: 'Notas_Reunion_Estrategia.docx', size: 0.5 }
+      ],
+      audios: [
+        { id: 'a1', name: 'Nota_Voz_Idea_App.ogg', size: 1.1 },
+        { id: 'a2', name: 'Grabacion_Entrevista_Podcast.mp3', size: 15.4 },
+        { id: 'a3', name: 'Cancion_Borrador_Guitarra.wav', size: 25.0 }
+      ]
+    };
 
-        // App State
-        let selectedIds = new Set([1, 2, 4, 6, 8]); // Default selected
-        let activeCategories = new Set(['photo', 'video', 'doc', 'audio']);
-        let currentView = 'list'; // 'list' or 'grid'
-        let activeModalItemId = null;
+    let activeCategory = null;
+    // Estado global de archivos seleccionados: clave = fileId, valor = { name, size, category }
+    let selectedFilesMap = new Map();
 
-        // DOM Elements
-        const galleryContainer = document.getElementById('galleryContainer');
-        const btnListView = document.getElementById('btnListView');
-        const btnGridView = document.getElementById('btnGridView');
-        const btnSelectAll = document.getElementById('btnSelectAll');
-        const btnDeselectAll = document.getElementById('btnDeselectAll');
-        const btnDownloadText = document.getElementById('btnDownloadText');
-        const btnDownload = document.getElementById('btnDownload');
-        const filteredStats = document.getElementById('filteredStats');
-        const toast = document.getElementById('toast');
-        const toastMsg = document.getElementById('toastMsg');
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const fileExplorer = document.getElementById('fileExplorer');
+    const explorerCategoryTitle = document.getElementById('explorerCategoryTitle');
+    const fileListContainer = document.getElementById('fileListContainer');
+    const fileSearchInput = document.getElementById('fileSearchInput');
+    
+    const selectedCountEl = document.getElementById('selectedCount');
+    const selectedSizeEl = document.getElementById('selectedSize');
+
+    // Manejo de clic en categoría
+    categoryButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const categoryKey = btn.getAttribute('data-category');
         
-        // Modal DOM Elements
-        const previewModal = document.getElementById('previewModal');
-        const btnCloseModal = document.getElementById('btnCloseModal');
-        const modalIconContainer = document.getElementById('modalIconContainer');
-        const modalTitle = document.getElementById('modalTitle');
-        const modalSub = document.getElementById('modalSub');
-        const modalType = document.getElementById('modalType');
-        const modalId = document.getElementById('modalId');
-        const btnModalToggleSelect = document.getElementById('btnModalToggleSelect');
-
-        // Toast Helper
-        function showToast(message) {
-            toastMsg.textContent = message;
-            toast.classList.remove('opacity-0', 'pointer-events-none');
-            setTimeout(() => {
-                toast.classList.add('opacity-0', 'pointer-events-none');
-            }, 2500);
+        // Si hace clic en la misma categoría activa, se cierra
+        if (activeCategory === categoryKey) {
+          fileExplorer.classList.remove('visible');
+          btn.classList.remove('active');
+          activeCategory = null;
+          return;
         }
 
-        // Render Media Items
-        function renderGallery() {
-            galleryContainer.innerHTML = '';
+        // Actualizar botones activos
+        categoryButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
 
-            const filteredItems = mediaItems.filter(item => activeCategories.has(item.cat));
-            filteredStats.textContent = `${filteredItems.length} elementos`;
+        activeCategory = categoryKey;
+        explorerCategoryTitle.textContent = `Archivos en: ${btn.textContent.trim().split(' ')[1]}`;
+        fileSearchInput.value = ''; // Limpiar búsqueda al cambiar
+        
+        renderFileList(mockFilesData[categoryKey]);
+        fileExplorer.classList.add('visible');
+      });
+    });
 
-            if (filteredItems.length === 0) {
-                galleryContainer.innerHTML = `
-                    <div class="text-center py-8 text-telegram-textMuted text-xs">
-                        <i class="fa-solid fa-folder-open text-2xl mb-2 opacity-50"></i>
-                        <p>No hay archivos en las categorías seleccionadas</p>
-                    </div>
-                `;
-                updateSummary();
-                return;
-            }
+    // Renderizar lista de archivos con checkboxes e indicadores
+    function renderFileList(filesArray, filterText = '') {
+      fileListContainer.innerHTML = '';
 
-            if (currentView === 'list') {
-                galleryContainer.className = "space-y-2 max-h-72 overflow-y-auto pr-1";
-                filteredItems.forEach(item => {
-                    const isSelected = selectedIds.has(item.id);
-                    const card = document.createElement('div');
-                    card.className = `item-card flex items-center justify-between p-2.5 rounded-xl bg-telegram-bg/80 cursor-pointer ${isSelected ? 'selected' : ''}`;
-                    
-                    card.innerHTML = `
-                        <div class="flex items-center space-x-3 truncate mr-2" onclick="openPreview(${item.id})">
-                            <div class="w-9 h-9 rounded-lg bg-telegram-card border border-telegram-border flex items-center justify-center text-lg flex-shrink-0">
-                                ${item.icon}
-                            </div>
-                            <div class="truncate">
-                                <p class="text-xs font-semibold text-white truncate">${item.name}</p>
-                                <p class="text-[10px] text-telegram-textMuted">${item.size} MB • ${item.date}</p>
-                            </div>
-                        </div>
-                        <input type="checkbox" class="custom-checkbox item-checkbox flex-shrink-0" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
-                    `;
-                    galleryContainer.appendChild(card);
-                });
-            } else {
-                // Grid View
-                galleryContainer.className = "grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1";
-                filteredItems.forEach(item => {
-                    const isSelected = selectedIds.has(item.id);
-                    const card = document.createElement('div');
-                    card.className = `item-card relative flex flex-col items-center p-2.5 rounded-xl bg-telegram-bg/80 text-center cursor-pointer ${isSelected ? 'selected' : ''}`;
-                    
-                    card.innerHTML = `
-                        <input type="checkbox" class="custom-checkbox item-checkbox absolute top-2 right-2 z-10" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
-                        <div class="w-12 h-12 rounded-xl bg-telegram-card border border-telegram-border flex items-center justify-center text-2xl mb-1.5" onclick="openPreview(${item.id})">
-                            ${item.icon}
-                        </div>
-                        <p class="text-[11px] font-medium text-white truncate w-full px-1" onclick="openPreview(${item.id})">${item.name}</p>
-                        <p class="text-[9px] text-telegram-textMuted" onclick="openPreview(${item.id})">${item.size} MB</p>
-                    `;
-                    galleryContainer.appendChild(card);
-                });
-            }
+      const filtered = filesArray.filter(file => 
+        file.name.toLowerCase().includes(filterText.toLowerCase())
+      );
 
-            // Attach Checkbox Change Listeners
-            document.querySelectorAll('.item-checkbox').forEach(cb => {
-                cb.addEventListener('change', (e) => {
-                    e.stopPropagation();
-                    const id = parseInt(cb.getAttribute('data-id'));
-                    if (cb.checked) {
-                        selectedIds.add(id);
-                    } else {
-                        selectedIds.delete(id);
-                    }
-                    renderGallery();
-                });
-            });
+      if (filtered.length === 0) {
+        fileListContainer.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 10px;">No se encontraron archivos</div>`;
+        return;
+      }
 
-            updateSummary();
+      filtered.forEach(file => {
+        const isChecked = selectedFilesMap.has(file.id);
+
+        const item = document.createElement('label');
+        item.className = 'file-item';
+        item.innerHTML = `
+          <input type="checkbox" class="file-checkbox" value="${file.id}" ${isChecked ? 'checked' : ''} />
+          <div class="file-info">
+            <span class="file-name" title="${file.name}">${file.name}</span>
+            <span class="file-size">${file.size} MB</span>
+          </div>
+        `;
+
+        const checkbox = item.querySelector('input');
+        checkbox.addEventListener('change', (e) => {
+          if (e.target.checked) {
+            selectedFilesMap.set(file.id, { name: file.name, size: file.size });
+          } else {
+            selectedFilesMap.delete(file.id);
+          }
+          updateGlobalSummary();
+        });
+
+        fileListContainer.appendChild(item);
+      });
+    }
+
+    // Filtrado en tiempo real con la barra de búsqueda
+    fileSearchInput.addEventListener('input', (e) => {
+      if (!activeCategory) return;
+      renderFileList(mockFilesData[activeCategory], e.target.value);
+    });
+
+    // Marcar todos en la categoría actual
+    document.getElementById('selectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      const currentFiles = mockFilesData[activeCategory];
+      const filterText = fileSearchInput.value;
+      
+      currentFiles.forEach(file => {
+        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
+          selectedFilesMap.set(file.id, { name: file.name, size: file.size });
         }
+      });
+      renderFileList(currentFiles, filterText);
+      updateGlobalSummary();
+    });
 
-        // Recalculate Totals
-        function updateSummary() {
-            let count = 0;
-            let totalMB = 0;
+    // Desmarcar todos en la categoría actual
+    document.getElementById('deselectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      const currentFiles = mockFilesData[activeCategory];
+      const filterText = fileSearchInput.value;
 
-            mediaItems.forEach(item => {
-                if (selectedIds.has(item.id)) {
-                    count++;
-                    totalMB += item.size;
-                }
-            });
-
-            btnDownloadText.textContent = `Descargar ZIP (${count} ítems • ${totalMB.toFixed(1)} MB)`;
+      currentFiles.forEach(file => {
+        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
+          selectedFilesMap.delete(file.id);
         }
+      });
+      renderFileList(currentFiles, filterText);
+      updateGlobalSummary();
+    });
 
-        // View Switching Listeners
-        btnListView.addEventListener('click', () => {
-            currentView = 'list';
-            btnListView.className = "p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition";
-            btnGridView.className = "p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition";
-            renderGallery();
-        });
+    // Actualizar contadores globales del botón de descarga
+    function updateGlobalSummary() {
+      let count = selectedFilesMap.size;
+      let totalMB = 0;
 
-        btnGridView.addEventListener('click', () => {
-            currentView = 'grid';
-            btnGridView.className = "p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition";
-            btnListView.className = "p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition";
-            renderGallery();
-        });
+      selectedFilesMap.forEach(file => {
+        totalMB += file.size;
+      });
 
-        // Category Filter Listeners
-        document.querySelectorAll('.category-filter').forEach(filter => {
-            filter.addEventListener('change', () => {
-                const cat = filter.getAttribute('data-cat');
-                if (filter.checked) {
-                    activeCategories.add(cat);
-                } else {
-                    activeCategories.delete(cat);
-                }
-                renderGallery();
-            });
-        });
+      selectedCountEl.textContent = count;
+      selectedSizeEl.textContent = totalMB.toFixed(1);
+    }
 
-        // Select All / Deselect All
-        btnSelectAll.addEventListener('click', () => {
-            mediaItems.filter(i => activeCategories.has(i.cat)).forEach(i => selectedIds.add(i.id));
-            renderGallery();
-            showToast('Todos los archivos mostrados han sido seleccionados');
-        });
-
-        btnDeselectAll.addEventListener('click', () => {
-            mediaItems.filter(i => activeCategories.has(i.cat)).forEach(i => selectedIds.delete(i.id));
-            renderGallery();
-            showToast('Selección desmarcada');
-        });
-
-        // Modal Logic
-        window.openPreview = function(id) {
-            const item = mediaItems.find(i => i.id === id);
-            if (!item) return;
-
-            activeModalItemId = id;
-            modalIconContainer.textContent = item.icon;
-            modalTitle.textContent = item.name;
-            modalSub.textContent = `${item.size} MB • ${item.date} 2026`;
-            modalId.textContent = `#ARC-${1000 + item.id}`;
-
-            const catMap = { photo: 'Fotografía', video: 'Video HD', doc: 'Documento', audio: 'Archivo de Audio' };
-            modalType.textContent = catMap[item.cat] || 'Archivo';
-
-            updateModalButtonState();
-
-            previewModal.classList.remove('hidden');
-            setTimeout(() => {
-                previewModal.classList.remove('opacity-0');
-            }, 10);
-        };
-
-        function closeModal() {
-            previewModal.classList.add('opacity-0');
-            setTimeout(() => {
-                previewModal.classList.add('hidden');
-                activeModalItemId = null;
-            }, 300);
-        }
-
-        function updateModalButtonState() {
-            if (selectedIds.has(activeModalItemId)) {
-                btnModalToggleSelect.textContent = ' Quitar del respaldo';
-                btnModalToggleSelect.className = 'w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition';
-            } else {
-                btnModalToggleSelect.textContent = ' Add al respaldo';
-                btnModalToggleSelect.className = 'w-full bg-telegram-blue hover:bg-telegram-blueHover text-white text-xs font-bold py-2.5 rounded-xl transition';
-            }
-        }
-
-        btnCloseModal.addEventListener('click', closeModal);
-        previewModal.addEventListener('click', (e) => {
-            if (e.target === previewModal) closeModal();
-        });
-
-        btnModalToggleSelect.addEventListener('click', () => {
-            if (!activeModalItemId) return;
-
-            if (selectedIds.has(activeModalItemId)) {
-                selectedIds.delete(activeModalItemId);
-                showToast('Archivo removido del respaldo');
-            } else {
-                selectedIds.add(activeModalItemId);
-                showToast('Archivo añadido al respaldo');
-            }
-
-            updateModalButtonState();
-            renderGallery();
-        });
-
-        // Download ZIP Button Click Event
-        btnDownload.addEventListener('click', () => {
-            if (selectedIds.size === 0) {
-                showToast('Por favor selecciona al menos un archivo');
-                return;
-            }
-
-            if (tg) {
-                tg.HapticFeedback?.notificationOccurred('success');
-            }
-
-            showToast('Generando respaldo ZIP...');
-            
-            // Simulating process feedback
-            const originalText = btnDownloadText.textContent;
-            btnDownloadText.textContent = ' Empaquetando ZIP...';
-            btnDownload.classList.add('opacity-80', 'pointer-events-none');
-
-            setTimeout(() => {
-                btnDownloadText.textContent = originalText;
-                btnDownload.classList.remove('opacity-80', 'pointer-events-none');
-                showToast('¡Respaldo enviado a tu chat de Telegram!');
-            }, 2000);
-        });
-
-        // Telegram Stars Button Click Event
-        document.getElementById('btnStarsUpgrade').addEventListener('click', () => {
-            if (tg) {
-                tg.HapticFeedback?.impactOccurred('medium');
-            }
-            showToast('Abriendo pasarela de pago con Telegram Stars ⭐');
-        });
-
-        // Initial Render
-        renderGallery();
-    </script>
+    // Inicializar Telegram WebApp si está disponible
+    if (window.Telegram && window.Telegram.WebApp) {
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+    }
+  </script>
 </body>
 </html>
-```
