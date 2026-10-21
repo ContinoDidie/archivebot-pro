@@ -1,61 +1,50 @@
 import os
 import logging
-import asyncio
-import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
+from threading import Thread
+from flask import Flask
 
-# Configurar logs para ver el estado del bot en la consola
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Configuración básica de logs
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- SERVIDOR HTTP FALSO PARA RENDER (Evita el error de puerto) ---
-class DummyHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(b"Archivebot Pro is running!")
+# --- 1. SERVIDOR FLASK PARA RENDER ---
+app = Flask(__name__)
 
-def run_dummy_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), DummyHandler)
-    server.serve_forever()
+@app.route('/')
+def health_check():
+    return "Archivebot-pro está activo y funcionando en Render.", 200
 
-# Inicia el servidor web en un hilo paralelo para no bloquear el bot
-threading.Thread(target=run_dummy_server, daemon=True).start()
-# -----------------------------------------------------------------
+def run_flask():
+    # Obtiene el puerto asignado dinámicamente por Render (por defecto 5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Comando /start que da la bienvenida al usuario."""
-    user = update.effective_user
-    await update.message.reply_text(
-        f"¡Hola, {user.first_name}! 👋\n\n"
-        "Bienvenido a **ArchiveBot Pro**. Tu herramienta definitiva para respaldar chats y contenido de Telegram.\n\n"
-        "👇 Presiona el botón del menú abajo para abrir el panel de control y comenzar."
-    )
+# Inicia el servidor Flask en segundo plano antes de arrancar el bot
+flask_thread = Thread(target=run_flask, daemon=True)
+flask_thread.start()
+logger.info("Servidor HTTP interno de Flask iniciado para Render.")
 
-def main():
-    # Token de tu bot de Telegram (puedes ingresarlo directamente aquí o usar variables de entorno)
-    # Reemplaza 'TU_TOKEN_AQUI' con el token que te dio BotFather
-    TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "TU_TOKEN_AQUI")
 
-    if TOKEN == "TU_TOKEN_AQUI":
-        logger.warning("⚠️ ADVERTENCIA: No has configurado el Token del bot. Recuerda agregarlo.")
+# --- 2. CÓDIGO DEL BOT DE TELEGRAM ---
+# Importa aquí las librerías que utilices para tu bot
+import telebot # O 'from telegram.ext import ApplicationBuilder', etc.
 
-    # Construir la aplicación del bot
-    application = ApplicationBuilder().token(TOKEN).build()
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "TU_TOKEN_AQUI")
 
-    # Registrar el comando /start
-    application.add_handler(CommandHandler("start", start))
+bot = telebot.TeleBot(TOKEN)
 
-    # Iniciar el bot en modo Polling
-    logger.info("🤖 ArchiveBot Pro iniciado correctamente y escuchando...")
-    application.run_polling()
+@bot.message_handler(commands=['start', 'help'])
+def send_welcome(message):
+    bot.reply_to(message, "¡Hola! Archivebot-pro está en línea y escuchando.")
 
-if __name__ == '__main__':
-    main()
+# Si tienes otros handlers o funciones de tu bot, agrégalos aquí...
+
+
+# --- 3. BUCLE PRINCIPAL DE EJECUCIÓN ---
+if __name__ == "__main__":
+    logger.info("Iniciando el polling de Telegram para Archivebot-pro...")
+    try:
+        # Bucle continuo para recibir mensajes de Telegram
+        bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    except Exception as e:
+        logger.error(f"Error en el bucle principal del bot: {e}")
