@@ -1,190 +1,586 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArchiveBot Pro - Panel</title>
-  <!-- SDK oficial de Telegram WebApps -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg-color: var(--tg-theme-bg-color, #18222d);
-      --text-color: var(--tg-theme-text-color, #ffffff);
-      --button-color: var(--tg-theme-button-color, #2ea6ff);
-      --button-text-color: var(--tg-theme-button-text-color, #ffffff);
-      --card-bg: var(--tg-theme-secondary-bg-color, #212d3b);
-      --hint-color: var(--tg-theme-hint-color, #7f91a4);
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text-color);
-      margin: 0;
-      padding: 16px;
-      box-sizing: border-box;
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-
-    h2 {
-      margin-top: 0;
-      font-size: 18px;
-      color: var(--button-color);
-    }
-
-    .status-box {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 10px;
-      font-size: 14px;
-    }
-
-    .progress-bar-bg {
-      background-color: rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      height: 12px;
-      width: 100%;
-      overflow: hidden;
-      margin: 12px 0;
-    }
-
-    .progress-bar-fill {
-      background-color: var(--button-color);
-      height: 100%;
-      width: 0%;
-      transition: width 0.3s ease;
-    }
-
-    .options-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin: 12px 0;
-    }
-
-    .option-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-    }
-
-    .btn {
-      width: 100%;
-      background-color: var(--button-color);
-      color: var(--button-text-color);
-      border: none;
-      padding: 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 15px;
-      cursor: pointer;
-      margin-top: 8px;
-    }
-
-    .btn-secondary {
-      background-color: transparent;
-      border: 1px solid var(--button-color);
-      color: var(--button-color);
-    }
-
-    .plan-badge {
-      font-size: 12px;
-      background: rgba(46, 166, 255, 0.15);
-      color: var(--button-color);
-      padding: 4px 8px;
-      border-radius: 6px;
-      font-weight: bold;
-    }
-  </style>
-</head>
-<body>
-
-  <!-- Tarjeta de Estado del Respaldo -->
-  <div class="card">
-    <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h2>📦 ArchiveBot Pro</h2>
-      <span class="plan-badge">Plan Gratuito</span>
-    </div>
-    
-    <div class="status-box">
-      <span>Estado:</span>
-      <strong id="status-text">Listo para escanear</strong>
-    </div>
-
-    <div class="progress-bar-bg">
-      <div class="progress-bar-fill" id="progress-fill"></div>
-    </div>
-
-    <div class="status-box" style="color: var(--hint-color); font-size: 12px;">
-      <span>Archivos encontrados: <b id="file-count">0</b></span>
-      <span>Tamaño: <b id="total-size">0 MB</b></span>
-    </div>
-  </div>
-
-  <!-- Filtros de Archivos -->
-  <div class="card">
-    <h2>🎯 ¿Qué deseas respaldar?</h2>
-    <div class="options-grid">
-      <label class="option-item"><input type="checkbox" checked id="chk-photos"> 📷 Fotos</label>
-      <label class="option-item"><input type="checkbox" checked id="chk-videos"> 🎥 Videos</label>
-      <label class="option-item"><input type="checkbox" checked id="chk-docs"> 📄 Documentos</label>
-      <label class="option-item"><input type="checkbox" id="chk-audio"> 🎵 Audios</label>
-    </div>
-    <button class="btn" id="btn-start" onclick="iniciarRespaldo()">⚡ Iniciar Respaldo ZIP</button>
-  </div>
-
-  <!-- Plan Pro & Monetización -->
-  <div class="card" style="text-align: center;">
-    <h2>⭐ Límite del Plan</h2>
-    <p style="font-size: 13px; color: var(--hint-color);">
-      Has utilizado 0 MB de 500 MB disponibles hoy.
-    </p>
-    <button class="btn btn-secondary" onclick="comprarPro()">
-      ⭐ Obtener Acceso Ilimitado con Telegram Stars
-    </button>
-  </div>
-
-  <script>
-    // Inicializar SDK de Telegram
-    const tg = window.Telegram.WebApp;
-    tg.expand(); // Expandir la ventana al tamaño máximo
-
-    function iniciarRespaldo() {
-      document.getElementById('status-text').innerText = "Escaneando chat...";
-      document.getElementById('btn-start').disabled = true;
-      document.getElementById('btn-start').innerText = "Procesando...";
-
-      // Simulación de progreso
-      let progreso = 0;
-      let interval = setInterval(() => {
-        progreso += 10;
-        document.getElementById('progress-fill').style.width = progreso + '%';
-        document.getElementById('file-count').innerText = Math.floor(progreso * 1.5);
-        document.getElementById('total-size').innerText = (progreso * 4.2).toFixed(1) + ' MB';
-
-        if (progreso >= 100) {
-          clearInterval(interval);
-          document.getElementById('status-text').innerText = "✅ ¡Respaldo completado!";
-          document.getElementById('btn-start').disabled = false;
-          document.getElementById('btn-start').innerText = "📥 Descargar Archivo ZIP";
-          
-          // Enviar datos de vuelta al bot de Telegram
-          tg.sendData(JSON.stringify({ action: "download_complete", size_mb: 420 }));
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ArchiveBot Pro MiniApp</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        telegram: {
+                            bg: '#0f1721',
+                            card: '#161d27',
+                            cardHover: '#1c2533',
+                            border: '#232e3c',
+                            blue: '#0088cc',
+                            blueHover: '#0077b3',
+                            accent: '#2AABEE',
+                            textMuted: '#707e94',
+                            star: '#eac54f'
+                        }
+                    }
+                }
+            }
         }
-      }, 500);
-    }
+    </script>
+    <!-- Telegram WebApp SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #0f1721;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
-    function comprarPro() {
-      tg.showAlert("Proximamente podrás suscribirte usando Telegram Stars.");
-    }
-  </script>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #161d27;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #232e3c;
+            border-radius: 4px;
+        }
+
+        /* Custom Checkbox Animation */
+        .custom-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3a4b5f;
+            border-radius: 6px;
+            background-color: transparent;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .custom-checkbox:checked {
+            background-color: #0088cc;
+            border-color: #0088cc;
+        }
+
+        .custom-checkbox:checked::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #ffffff;
+            font-size: 11px;
+        }
+
+        /* Card selection glow */
+        .item-card {
+            transition: all 0.2s ease;
+            border: 1px solid #232e3c;
+        }
+
+        .item-card.selected {
+            border-color: #0088cc;
+            background-color: #1a2736;
+        }
+
+        /* Shimmer effect for progress bar */
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .animated-bar {
+            background: linear-gradient(90deg, #0088cc 25%, #2AABEE 50%, #0088cc 75%);
+            background-size: 200% 100%;
+            animation: shimmer 2.5s infinite;
+        }
+
+        /* Modal backdrop blur */
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-5 max-w-md mx-auto min-h-screen flex flex-col justify-between select-none">
+
+    <!-- Top Toast Notification -->
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 bg-telegram-blue text-white px-4 py-2 rounded-full text-xs font-semibold shadow-lg opacity-0 pointer-events-none transition-all duration-300 z-50 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-info"></i>
+        <span id="toastMsg">Notificación</span>
+    </div>
+
+    <!-- MAIN CONTAINER -->
+    <div class="space-y-4 pb-20">
+
+        <!-- 1. HEADER & BACKUP STATUS PANEL -->
+        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl">
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="text-2xl">📦</div>
+                    <div>
+                        <h1 class="font-bold text-base text-white leading-tight">ArchiveBot Pro</h1>
+                        <p class="text-xs text-telegram-textMuted">Gestor de Respaldos</p>
+                    </div>
+                </div>
+                <span class="bg-telegram-blue/20 text-telegram-accent text-[10px] font-semibold px-2.5 py-1 rounded-full border border-telegram-blue/30">
+                    Plan Gratuito
+                </span>
+            </div>
+
+            <!-- Status Indicator -->
+            <div class="flex justify-between items-center text-xs mb-2">
+                <span class="text-gray-300 font-medium">Estado:</span>
+                <span id="statusBadge" class="text-emerald-400 font-bold flex items-center space-x-1">
+                    <i class="fa-solid fa-square-check"></i>
+                    <span>¡Respaldo completado!</span>
+                </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="w-full bg-telegram-bg rounded-full h-2.5 mb-3 overflow-hidden p-0.5 border border-telegram-border">
+                <div id="progressBar" class="animated-bar h-full rounded-full transition-all duration-500" style="width: 100%;"></div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="flex justify-between text-xs text-telegram-textMuted pt-1 border-t border-telegram-border/50">
+                <span>Archivos encontrados: <strong id="statFoundCount" class="text-gray-200">150</strong></span>
+                <span>Tamaño: <strong id="statFoundSize" class="text-gray-200">420.0 MB</strong></span>
+            </div>
+        </div>
+
+        <!-- 2. MAIN SELECTION & INTERACTIVE BACKUP PANEL -->
+        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl space-y-4">
+            
+            <div class="flex justify-between items-center">
+                <h2 class="font-bold text-sm text-white flex items-center space-x-2">
+                    <span>🎯</span>
+                    <span>¿Qué deseas respaldar?</span>
+                </h2>
+                <span class="text-[11px] text-telegram-textMuted" id="filteredStats">150 elementos</span>
+            </div>
+
+            <!-- Category Filters -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
+                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="photo" checked>
+                    <span class="flex items-center space-x-1.5 font-medium">
+                        <span>📷</span>
+                        <span>Fotos</span>
+                    </span>
+                </label>
+                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
+                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="video" checked>
+                    <span class="flex items-center space-x-1.5 font-medium">
+                        <span>🎬</span>
+                        <span>Videos</span>
+                    </span>
+                </label>
+                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
+                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="doc" checked>
+                    <span class="flex items-center space-x-1.5 font-medium">
+                        <span>📄</span>
+                        <span>Documentos</span>
+                    </span>
+                </label>
+                <label class="flex items-center space-x-2.5 bg-telegram-bg/60 p-2.5 rounded-xl border border-telegram-border/60 cursor-pointer hover:border-telegram-blue/50 transition">
+                    <input type="checkbox" class="custom-checkbox category-filter" data-cat="audio" checked>
+                    <span class="flex items-center space-x-1.5 font-medium">
+                        <span>🎵</span>
+                        <span>Audios</span>
+                    </span>
+                </label>
+            </div>
+
+            <!-- VIEW CONTROLS & SELECTION BAR -->
+            <div class="flex justify-between items-center pt-2 border-t border-telegram-border/50">
+                <div class="flex items-center space-x-2">
+                    <button id="btnSelectAll" class="text-[11px] bg-telegram-bg hover:bg-telegram-border text-gray-300 px-2.5 py-1 rounded-lg border border-telegram-border transition">
+                        Seleccionar todo
+                    </button>
+                    <button id="btnDeselectAll" class="text-[11px] bg-telegram-bg hover:bg-telegram-border text-telegram-textMuted px-2.5 py-1 rounded-lg border border-telegram-border transition">
+                        Desmarcar
+                    </button>
+                </div>
+
+                <!-- List/Grid Switcher -->
+                <div class="flex items-center bg-telegram-bg p-0.5 rounded-lg border border-telegram-border">
+                    <button id="btnListView" class="p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition">
+                        <i class="fa-solid fa-list"></i>
+                    </button>
+                    <button id="btnGridView" class="p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition">
+                        <i class="fa-solid fa-border-all"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- DYNAMIC GALLERY CONTAINER -->
+            <div id="galleryContainer" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+                <!-- Dynamic Items will be rendered here via JS -->
+            </div>
+
+            <!-- DOWNLOAD MAIN BUTTON -->
+            <button id="btnDownload" class="w-full bg-telegram-blue hover:bg-telegram-blueHover text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-telegram-blue/20 flex items-center justify-center space-x-2 transition transform active:scale-95">
+                <span class="text-base">👝</span>
+                <span id="btnDownloadText">Descargar Archivo ZIP (0 ítems • 0.0 MB)</span>
+            </button>
+        </div>
+
+        <!-- 3. PLAN LIMIT & TELEGRAM STARS SECTION -->
+        <div class="bg-telegram-card rounded-2xl p-4 border border-telegram-border shadow-xl space-y-3 text-center">
+            <h3 class="font-bold text-sm text-white flex items-center justify-center space-x-1.5">
+                <span class="text-telegram-star">⭐</span>
+                <span>Límite del Plan</span>
+            </h3>
+
+            <p class="text-xs text-telegram-textMuted">
+                Has utilizado <strong id="usedQuotaText" class="text-gray-200">0 MB</strong> de <strong class="text-gray-200">500 MB</strong> disponibles hoy.
+            </p>
+
+            <!-- Telegram Stars Upgrade Button -->
+            <button id="btnStarsUpgrade" class="w-full bg-transparent hover:bg-telegram-star/10 border-2 border-telegram-star/60 hover:border-telegram-star text-telegram-star font-bold py-2.5 px-4 rounded-xl flex items-center justify-center space-x-2 transition transform active:scale-95">
+                <i class="fa-solid fa-star text-telegram-star"></i>
+                <span class="text-xs">Obtener Acceso Ilimitado con Telegram Stars</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- PREVIEW MODAL -->
+    <div id="previewModal" class="fixed inset-0 bg-black/80 modal-backdrop hidden z-50 flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-telegram-card border border-telegram-border w-full max-w-sm rounded-2xl p-5 shadow-2xl relative space-y-4">
+            <!-- Close Button -->
+            <button id="btnCloseModal" class="absolute top-3 right-3 text-telegram-textMuted hover:text-white p-2">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <!-- Modal Content -->
+            <div class="text-center space-y-3">
+                <div id="modalIconContainer" class="w-20 h-20 bg-telegram-bg rounded-2xl mx-auto flex items-center justify-center text-4xl border border-telegram-border">
+                    🖼️
+                </div>
+                <div>
+                    <h3 id="modalTitle" class="font-bold text-sm text-white truncate max-w-xs mx-auto">Nombre_del_Archivo.jpg</h3>
+                    <p id="modalSub" class="text-xs text-telegram-textMuted mt-0.5">2.4 MB • 21 Oct 2026</p>
+                </div>
+
+                <div class="bg-telegram-bg/80 rounded-xl p-3 text-left space-y-1.5 text-xs border border-telegram-border">
+                    <div class="flex justify-between"><span class="text-telegram-textMuted">Tipo:</span> <span id="modalType" class="text-gray-200 font-medium">Fotografía</span></div>
+                    <div class="flex justify-between"><span class="text-telegram-textMuted">Estado:</span> <span class="text-emerald-400 font-medium">Listo para descarga</span></div>
+                    <div class="flex justify-between"><span class="text-telegram-textMuted">ID Local:</span> <span id="modalId" class="text-gray-400 font-mono">#ARC-9021</span></div>
+                </div>
+
+                <button id="btnModalToggleSelect" class="w-full bg-telegram-blue hover:bg-telegram-blueHover text-white text-xs font-bold py-2.5 rounded-xl transition">
+                    Seleccionar para respaldo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Telegram WebApp Initialization
+        const tg = window.Telegram?.WebApp;
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            // Adapt colors if supported
+            if (tg.setHeaderColor) tg.setHeaderColor('#0f1721');
+            if (tg.setBackgroundColor) tg.setBackgroundColor('#0f1721');
+        }
+
+        // Mock Database of Media Items
+        const mediaItems = [
+            { id: 1, name: 'DSC_0041_Vacaciones.jpg', cat: 'photo', icon: '🖼️', size: 2.4, date: '21 Oct' },
+            { id: 2, name: 'Foto_Familia_2026.png', cat: 'photo', icon: '📸', size: 4.1, date: '20 Oct' },
+            { id: 3, name: 'Captura_Pantalla_Telegram.png', cat: 'photo', icon: '🖼️', size: 1.2, date: '19 Oct' },
+            { id: 4, name: 'Video_Aniversario_HD.mp4', cat: 'video', icon: '🎥', size: 45.8, date: '18 Oct' },
+            { id: 5, name: 'Proyecto_Final_Presentacion.mp4', cat: 'video', icon: '🎬', size: 120.5, date: '15 Oct' },
+            { id: 6, name: 'Contrato_Servicios_Firmado.pdf', cat: 'doc', icon: '📄', size: 3.5, date: '21 Oct' },
+            { id: 7, name: 'Resumen_Cuentas_Anual.xlsx', cat: 'doc', icon: '📊', size: 1.8, date: '14 Oct' },
+            { id: 8, name: 'Nota_de_Voz_Reunion.mp3', cat: 'audio', icon: '🎙️', size: 8.4, date: '21 Oct' },
+            { id: 9, name: 'Cancion_Demostrativa.flac', cat: 'audio', icon: '🎵', size: 22.0, date: '10 Oct' },
+            { id: 10, name: 'Foto_Perfil_Pro.jpg', cat: 'photo', icon: '🖼️', size: 3.2, date: '08 Oct' },
+            { id: 11, name: 'Documento_Identidad_Scan.pdf', cat: 'doc', icon: '📝', size: 2.1, date: '05 Oct' },
+            { id: 12, name: 'Video_Clip_Promocional.mov', cat: 'video', icon: '🎥', size: 205.0, date: '01 Oct' }
+        ];
+
+        // App State
+        let selectedIds = new Set([1, 2, 4, 6, 8]); // Default selected
+        let activeCategories = new Set(['photo', 'video', 'doc', 'audio']);
+        let currentView = 'list'; // 'list' or 'grid'
+        let activeModalItemId = null;
+
+        // DOM Elements
+        const galleryContainer = document.getElementById('galleryContainer');
+        const btnListView = document.getElementById('btnListView');
+        const btnGridView = document.getElementById('btnGridView');
+        const btnSelectAll = document.getElementById('btnSelectAll');
+        const btnDeselectAll = document.getElementById('btnDeselectAll');
+        const btnDownloadText = document.getElementById('btnDownloadText');
+        const btnDownload = document.getElementById('btnDownload');
+        const filteredStats = document.getElementById('filteredStats');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        
+        // Modal DOM Elements
+        const previewModal = document.getElementById('previewModal');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+        const modalIconContainer = document.getElementById('modalIconContainer');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalSub = document.getElementById('modalSub');
+        const modalType = document.getElementById('modalType');
+        const modalId = document.getElementById('modalId');
+        const btnModalToggleSelect = document.getElementById('btnModalToggleSelect');
+
+        // Toast Helper
+        function showToast(message) {
+            toastMsg.textContent = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2500);
+        }
+
+        // Render Media Items
+        function renderGallery() {
+            galleryContainer.innerHTML = '';
+
+            const filteredItems = mediaItems.filter(item => activeCategories.has(item.cat));
+            filteredStats.textContent = `${filteredItems.length} elementos`;
+
+            if (filteredItems.length === 0) {
+                galleryContainer.innerHTML = `
+                    <div class="text-center py-8 text-telegram-textMuted text-xs">
+                        <i class="fa-solid fa-folder-open text-2xl mb-2 opacity-50"></i>
+                        <p>No hay archivos en las categorías seleccionadas</p>
+                    </div>
+                `;
+                updateSummary();
+                return;
+            }
+
+            if (currentView === 'list') {
+                galleryContainer.className = "space-y-2 max-h-72 overflow-y-auto pr-1";
+                filteredItems.forEach(item => {
+                    const isSelected = selectedIds.has(item.id);
+                    const card = document.createElement('div');
+                    card.className = `item-card flex items-center justify-between p-2.5 rounded-xl bg-telegram-bg/80 cursor-pointer ${isSelected ? 'selected' : ''}`;
+                    
+                    card.innerHTML = `
+                        <div class="flex items-center space-x-3 truncate mr-2" onclick="openPreview(${item.id})">
+                            <div class="w-9 h-9 rounded-lg bg-telegram-card border border-telegram-border flex items-center justify-center text-lg flex-shrink-0">
+                                ${item.icon}
+                            </div>
+                            <div class="truncate">
+                                <p class="text-xs font-semibold text-white truncate">${item.name}</p>
+                                <p class="text-[10px] text-telegram-textMuted">${item.size} MB • ${item.date}</p>
+                            </div>
+                        </div>
+                        <input type="checkbox" class="custom-checkbox item-checkbox flex-shrink-0" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
+                    `;
+                    galleryContainer.appendChild(card);
+                });
+            } else {
+                // Grid View
+                galleryContainer.className = "grid grid-cols-3 gap-2 max-h-72 overflow-y-auto pr-1";
+                filteredItems.forEach(item => {
+                    const isSelected = selectedIds.has(item.id);
+                    const card = document.createElement('div');
+                    card.className = `item-card relative flex flex-col items-center p-2.5 rounded-xl bg-telegram-bg/80 text-center cursor-pointer ${isSelected ? 'selected' : ''}`;
+                    
+                    card.innerHTML = `
+                        <input type="checkbox" class="custom-checkbox item-checkbox absolute top-2 right-2 z-10" data-id="${item.id}" ${isSelected ? 'checked' : ''}>
+                        <div class="w-12 h-12 rounded-xl bg-telegram-card border border-telegram-border flex items-center justify-center text-2xl mb-1.5" onclick="openPreview(${item.id})">
+                            ${item.icon}
+                        </div>
+                        <p class="text-[11px] font-medium text-white truncate w-full px-1" onclick="openPreview(${item.id})">${item.name}</p>
+                        <p class="text-[9px] text-telegram-textMuted" onclick="openPreview(${item.id})">${item.size} MB</p>
+                    `;
+                    galleryContainer.appendChild(card);
+                });
+            }
+
+            // Attach Checkbox Change Listeners
+            document.querySelectorAll('.item-checkbox').forEach(cb => {
+                cb.addEventListener('change', (e) => {
+                    e.stopPropagation();
+                    const id = parseInt(cb.getAttribute('data-id'));
+                    if (cb.checked) {
+                        selectedIds.add(id);
+                    } else {
+                        selectedIds.delete(id);
+                    }
+                    renderGallery();
+                });
+            });
+
+            updateSummary();
+        }
+
+        // Recalculate Totals
+        function updateSummary() {
+            let count = 0;
+            let totalMB = 0;
+
+            mediaItems.forEach(item => {
+                if (selectedIds.has(item.id)) {
+                    count++;
+                    totalMB += item.size;
+                }
+            });
+
+            btnDownloadText.textContent = `Descargar ZIP (${count} ítems • ${totalMB.toFixed(1)} MB)`;
+        }
+
+        // View Switching Listeners
+        btnListView.addEventListener('click', () => {
+            currentView = 'list';
+            btnListView.className = "p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition";
+            btnGridView.className = "p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition";
+            renderGallery();
+        });
+
+        btnGridView.addEventListener('click', () => {
+            currentView = 'grid';
+            btnGridView.className = "p-1.5 px-2.5 rounded-md text-xs text-white bg-telegram-blue shadow transition";
+            btnListView.className = "p-1.5 px-2.5 rounded-md text-xs text-telegram-textMuted hover:text-white transition";
+            renderGallery();
+        });
+
+        // Category Filter Listeners
+        document.querySelectorAll('.category-filter').forEach(filter => {
+            filter.addEventListener('change', () => {
+                const cat = filter.getAttribute('data-cat');
+                if (filter.checked) {
+                    activeCategories.add(cat);
+                } else {
+                    activeCategories.delete(cat);
+                }
+                renderGallery();
+            });
+        });
+
+        // Select All / Deselect All
+        btnSelectAll.addEventListener('click', () => {
+            mediaItems.filter(i => activeCategories.has(i.cat)).forEach(i => selectedIds.add(i.id));
+            renderGallery();
+            showToast('Todos los archivos mostrados han sido seleccionados');
+        });
+
+        btnDeselectAll.addEventListener('click', () => {
+            mediaItems.filter(i => activeCategories.has(i.cat)).forEach(i => selectedIds.delete(i.id));
+            renderGallery();
+            showToast('Selección desmarcada');
+        });
+
+        // Modal Logic
+        window.openPreview = function(id) {
+            const item = mediaItems.find(i => i.id === id);
+            if (!item) return;
+
+            activeModalItemId = id;
+            modalIconContainer.textContent = item.icon;
+            modalTitle.textContent = item.name;
+            modalSub.textContent = `${item.size} MB • ${item.date} 2026`;
+            modalId.textContent = `#ARC-${1000 + item.id}`;
+
+            const catMap = { photo: 'Fotografía', video: 'Video HD', doc: 'Documento', audio: 'Archivo de Audio' };
+            modalType.textContent = catMap[item.cat] || 'Archivo';
+
+            updateModalButtonState();
+
+            previewModal.classList.remove('hidden');
+            setTimeout(() => {
+                previewModal.classList.remove('opacity-0');
+            }, 10);
+        };
+
+        function closeModal() {
+            previewModal.classList.add('opacity-0');
+            setTimeout(() => {
+                previewModal.classList.add('hidden');
+                activeModalItemId = null;
+            }, 300);
+        }
+
+        function updateModalButtonState() {
+            if (selectedIds.has(activeModalItemId)) {
+                btnModalToggleSelect.textContent = ' Quitar del respaldo';
+                btnModalToggleSelect.className = 'w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-2.5 rounded-xl transition';
+            } else {
+                btnModalToggleSelect.textContent = ' Add al respaldo';
+                btnModalToggleSelect.className = 'w-full bg-telegram-blue hover:bg-telegram-blueHover text-white text-xs font-bold py-2.5 rounded-xl transition';
+            }
+        }
+
+        btnCloseModal.addEventListener('click', closeModal);
+        previewModal.addEventListener('click', (e) => {
+            if (e.target === previewModal) closeModal();
+        });
+
+        btnModalToggleSelect.addEventListener('click', () => {
+            if (!activeModalItemId) return;
+
+            if (selectedIds.has(activeModalItemId)) {
+                selectedIds.delete(activeModalItemId);
+                showToast('Archivo removido del respaldo');
+            } else {
+                selectedIds.add(activeModalItemId);
+                showToast('Archivo añadido al respaldo');
+            }
+
+            updateModalButtonState();
+            renderGallery();
+        });
+
+        // Download ZIP Button Click Event
+        btnDownload.addEventListener('click', () => {
+            if (selectedIds.size === 0) {
+                showToast('Por favor selecciona al menos un archivo');
+                return;
+            }
+
+            if (tg) {
+                tg.HapticFeedback?.notificationOccurred('success');
+            }
+
+            showToast('Generando respaldo ZIP...');
+            
+            // Simulating process feedback
+            const originalText = btnDownloadText.textContent;
+            btnDownloadText.textContent = ' Empaquetando ZIP...';
+            btnDownload.classList.add('opacity-80', 'pointer-events-none');
+
+            setTimeout(() => {
+                btnDownloadText.textContent = originalText;
+                btnDownload.classList.remove('opacity-80', 'pointer-events-none');
+                showToast('¡Respaldo enviado a tu chat de Telegram!');
+            }, 2000);
+        });
+
+        // Telegram Stars Button Click Event
+        document.getElementById('btnStarsUpgrade').addEventListener('click', () => {
+            if (tg) {
+                tg.HapticFeedback?.impactOccurred('medium');
+            }
+            showToast('Abriendo pasarela de pago con Telegram Stars ⭐');
+        });
+
+        // Initial Render
+        renderGallery();
+    </script>
 </body>
 </html>
+```
