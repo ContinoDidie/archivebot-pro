@@ -7,25 +7,26 @@ license = "MIT"
 repository = "https://github.com/nukesor/archivebot"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-cryptg = "^0.2"
-telethon = "^1.8.0"
-SQLAlchemy = "^1.3"
-sqlalchemy-utils = "^0.37"
+python = "^3.11"
+greenlet = "^3.0.0"
+cryptg = "^0.4"
+telethon = "^1.28.0"
+SQLAlchemy = "^2.0"
+sqlalchemy-utils = "^0.41"
 raven = "^6.10"
 toml = "^0.10"
-typer = "^0.6.1"
+typer = "^0.9.0"
 
 [tool.poetry.group.dev.dependencies]
-autoflake = "^1.7.7"
-black = "^22.10.0"
-flake8 = "^5.0.4"
-isort = "^5.10.1"
+autoflake = "^2.2.0"
+black = "^23.9.0"
+flake8 = "^6.1.0"
+isort = "^5.12.0"
 types-toml = "^0.10.8"
 
 [build-system]
-requires = ["poetry>=0.12"]
-build-backend = "poetry.masonry.api"
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.isort]
 line_length = 88
