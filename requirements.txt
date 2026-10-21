@@ -1,9 +1,7 @@
-telethon==1.28.0
-cryptg==0.4
-SQLAlchemy==2.0.21
+telethon==1.34.0
+SQLAlchemy==2.0.25
 sqlalchemy-utils==0.41.2
 toml==0.10.2
 typer==0.9.0
 greenlet==3.0.3
 raven==6.10.0
-
