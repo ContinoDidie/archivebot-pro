@@ -2,41 +2,42 @@ import os
 import logging
 from threading import Thread
 import time
+from flask import Flask, jsonify, request, send_from_directory
 
 # Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from flask import Flask, jsonify, request
-app = Flask(__name__)
+# Configuramos Flask para servir archivos desde la misma carpeta del proyecto
+app = Flask(__name__, static_folder='.', static_url_path='')
 
-# Almacenamiento en memoria con soporte para carpetas por usuario
-# Estructura: { user_id: { "Nombre_Carpeta": [ {id, name, size, category}, ... ] } }
+# Almacenamiento en memoria para los archivos reales de Telegram
 user_files_database = {}
 
+# 1. Ruta principal que sirve tu interfaz visual (index.html)
 @app.route('/')
-def home():
-    return "Archivebot-pro backend is running with folder support!", 200
+def serve_index():
+    return send_from_directory('.', 'index.html')
 
-# Ruta API para que la MiniApp obtenga las carpetas y archivos del usuario
+# 2. Ruta API que consulta la MiniApp para obtener los archivos reales por categoría
 @app.route('/api/files', methods=['GET'])
 def get_files():
-    # Puedes pasar el user_id por parámetros (ej: /api/files?user_id=123) o devolver una por defecto para pruebas
     user_id = request.args.get('user_id', 'default_user')
     
-    # Si el usuario no tiene registros, le creamos una estructura inicial con una carpeta "General"
     if user_id not in user_files_database:
         user_files_database[user_id] = {
-            "General": []
+            "photos": [],
+            "videos": [],
+            "documents": [],
+            "audios": []
         }
-        
     return jsonify(user_files_database[user_id])
 
 
 # --- HILO DEL BOT DE TELEGRAM ---
 def run_telegram_bot():
     time.sleep(3)
-    logger.info("Iniciando bucle de Telegram con soporte de carpetas...")
+    logger.info("Iniciando bucle de Telegram...")
     try:
         import telebot
         TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
@@ -48,21 +49,20 @@ def run_telegram_bot():
         
         @bot.message_handler(commands=['start', 'help'])
         def send_welcome(message):
-            bot.reply_to(message, "¡Hola! Envíame archivos o carpetas completas y los organizaré en tu panel.")
+            bot.reply_to(message, "¡Hola! Envíame fotos, videos, documentos o audios y aparecerán en tu panel web.")
 
-        # Manejador de archivos y documentos reales
         @bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice'])
         def handle_user_files(message):
             try:
                 user_id = str(message.chat.id)
-                carpeta_actual = "General" # Carpeta por defecto donde caen los archivos sueltos
                 
-                # Inicializar estructura del usuario si no existe
                 if user_id not in user_files_database:
-                    user_files_database[user_id] = {carpeta_actual: []}
-                
-                if carpeta_actual not in user_files_database[user_id]:
-                    user_files_database[user_id][carpeta_actual] = []
+                    user_files_database[user_id] = {
+                        "photos": [],
+                        "videos": [],
+                        "documents": [],
+                        "audios": []
+                    }
 
                 file_name = "archivo_sin_nombre"
                 file_size_mb = 1.0
@@ -90,14 +90,13 @@ def run_telegram_bot():
                     file_size_mb = round(audio_obj.file_size / (1024 * 1024), 2)
 
                 new_entry = {
-                    "id": str(len(user_files_database[user_id][carpeta_actual]) + 1),
+                    "id": str(len(user_files_database[user_id][category]) + 1),
                     "name": file_name,
-                    "size": file_size_mb,
-                    "category": category
+                    "size": file_size_mb
                 }
                 
-                user_files_database[user_id][carpeta_actual].append(new_entry)
-                bot.reply_to(message, f"📁 Guardado en carpeta [{carpeta_actual}]: {file_name} ({file_size_mb} MB)")
+                user_files_database[user_id][category].append(new_entry)
+                bot.reply_to(message, f"✅ Archivo guardado en [{category}]: {file_name} ({file_size_mb} MB)")
 
             except Exception as e:
                 logger.error(f"Error procesando archivo: {e}")
