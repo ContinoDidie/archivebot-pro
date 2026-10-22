@@ -1,50 +1,48 @@
 import os
 import logging
 from threading import Thread
-from flask import Flask
+import time
 
-# Configuración básica de logs
+# Configuración de logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# --- 1. SERVIDOR FLASK PARA RENDER ---
+# --- 1. CONFIGURACIÓN DEL SERVIDOR WEB (OBLIGATORIO PARA RENDER) ---
+from flask import Flask
 app = Flask(__name__)
 
 @app.route('/')
 def health_check():
-    return "Archivebot-pro está activo y funcionando en Render.", 200
+    return "Archivebot-pro is running!", 200
 
-def run_flask():
-    # Obtiene el puerto asignado dinámicamente por Render (por defecto 5000)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
-# Inicia el servidor Flask en segundo plano antes de arrancar el bot
-flask_thread = Thread(target=run_flask, daemon=True)
-flask_thread.start()
-logger.info("Servidor HTTP interno de Flask iniciado para Render.")
-
-
-# --- 2. CÓDIGO DEL BOT DE TELEGRAM ---
-# Importa aquí las librerías que utilices para tu bot
-import telebot # O 'from telegram.ext import ApplicationBuilder', etc.
-
-TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "TU_TOKEN_AQUI")
-
-bot = telebot.TeleBot(TOKEN)
-
-@bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):
-    bot.reply_to(message, "¡Hola! Archivebot-pro está en línea y escuchando.")
-
-# Si tienes otros handlers o funciones de tu bot, agrégalos aquí...
-
-
-# --- 3. BUCLE PRINCIPAL DE EJECUCIÓN ---
-if __name__ == "__main__":
-    logger.info("Iniciando el polling de Telegram para Archivebot-pro...")
+# --- 2. FUNCIÓN PARA CORRER EL BOT EN SEGUNDO PLANO ---
+def run_telegram_bot():
+    # Damos unos segundos para que el servidor web responda primero en Render
+    time.sleep(3)
+    logger.info("Iniciando bucle de Telegram...")
     try:
-        # Bucle continuo para recibir mensajes de Telegram
+        import telebot
+        TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+        if not TOKEN:
+            logger.error("¡Falta el TELEGRAM_BOT_TOKEN en las variables de entorno!")
+            return
+        
+        bot = telebot.TeleBot(TOKEN)
+        
+        @bot.message_handler(commands=['start', 'help'])
+        def send_welcome(message):
+            bot.reply_to(message, "¡Archivebot-pro operativo en Render!")
+            
         bot.infinity_polling(timeout=10, long_polling_timeout=5)
     except Exception as e:
-        logger.error(f"Error en el bucle principal del bot: {e}")
+        logger.error(f"Error en el hilo del bot de Telegram: {e}")
+
+# Lanzamos el bot en un hilo separado para que NO bloquee el puerto web
+bot_thread = Thread(target=run_telegram_bot, daemon=True)
+bot_thread.start()
+
+# --- 3. ARRANQUE PRINCIPAL PARA GUNICORN ---
+if __name__ == "__main__":
+    # Esto se ejecuta si ejecutas python main.py localmente
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
