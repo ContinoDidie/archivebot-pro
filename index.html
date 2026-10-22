@@ -280,6 +280,47 @@
     }
 
     fetchRealFiles();
+    // Diagnóstico: comprobar que la Mini App solicita los archivos
+window.addEventListener('load', async () => {
+const status = document.createElement('div');
+status.style.cssText = 'position:fixed;bottom:10px;left:10px;right:10px;padding:12px;background:#172033;color:#fff;z-index:99999;font-size:14px;border-radius:8px;';
+status.textContent = 'Conectando con ArchiveBot Pro...';
+document.body.appendChild(status);
+
+try {
+    if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready();
+        window.Telegram.WebApp.expand();
+    }
+
+    let userId = window.Telegram?.WebApp?.initDataUnsafe?.user?.id;
+
+    if (!userId) {
+        status.textContent = 'ERROR: Telegram no proporcionó el ID del usuario. Abre la app desde el bot.';
+        return;
+    }
+
+    status.textContent = 'Usuario detectado. Buscando archivos...';
+
+    const response = await fetch('/api/files?user_id=' + encodeURIComponent(userId));
+    const data = await response.json();
+
+    if (!response.ok) {
+        status.textContent = 'Error del servidor (' + response.status + '): ' + (data.error || 'Error desconocido');
+        return;
+    }
+
+    filesData = data;
+    updateUI();
+    status.textContent = 'Conexión correcta. Archivos encontrados: ' +
+        ['photos', 'videos', 'documents', 'audios']
+        .reduce((sum, category) => sum + (data[category] || []).length, 0);
+
+} catch (error) {
+    status.textContent = 'Error de conexión: ' + error.message;
+}
+
+});
   </script>
 </body>
 </html>
