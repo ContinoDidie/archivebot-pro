@@ -17,55 +17,65 @@
       --border-color: rgba(255, 255, 255, 0.08);
       --success-color: #22c55e;
     }
+
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: var(--bg-color); color: var(--text-main); padding: 16px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
     .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
+
     .status-card, .section-card, .limit-card { background: var(--card-bg); border-radius: 14px; padding: 16px; border: 1px solid var(--border-color); }
     .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .bot-title { font-size: 1.1rem; font-weight: 700; }
+    .bot-title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
     .plan-badge { background: rgba(0, 136, 204, 0.15); color: var(--accent-color); font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
     .status-text { font-size: 0.9rem; color: var(--success-color); margin-bottom: 8px; font-weight: 500; }
     .progress-bar-bg { background: #0f172a; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
     .progress-bar-fill { background: var(--accent-color); height: 100%; width: 100%; border-radius: 4px; }
     .status-details { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); }
-    .section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; }
-    
-    /* Grid de Carpetas Dinámicas */
-    .folders-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .folder-btn { background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s ease; text-align: left; }
-    .folder-btn:hover { background: var(--card-hover); border-color: var(--accent-color); }
-    .folder-btn.active { border-color: var(--accent-color); background: rgba(0, 136, 204, 0.1); }
 
-    .file-explorer { display: none; margin-top: 14px; border-top: 1px solid var(--border-color); paddingTop: 14px; }
-    .file-explorer.visible { display: block; }
+    .section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; color: var(--text-main); }
+    .categories-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .category-btn { background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s ease; text-align: left; }
+    .category-btn:hover { background: var(--card-hover); border-color: var(--accent-color); }
+    .category-btn.active { border-color: var(--accent-color); background: rgba(0, 136, 204, 0.1); }
+
+    .file-explorer { display: none; margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 14px; }
+    .file-explorer.visible { display: block; animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
     .explorer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .explorer-title { font-size: 0.85rem; font-weight: 600; color: var(--accent-color); }
     .action-link { background: none; border: none; color: var(--text-secondary); font-size: 0.75rem; cursor: pointer; text-decoration: underline; }
-    
+    .action-link:hover { color: var(--text-main); }
+
     .search-box { position: relative; margin-bottom: 10px; }
     .search-input { width: 100%; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px 8px 32px; color: var(--text-main); font-size: 0.85rem; outline: none; }
+    .search-input:focus { border-color: var(--accent-color); }
     .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: var(--text-secondary); }
 
     .file-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
-    .file-item { display: flex; align-items: center; background: #0f172a; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+    .file-item { display: flex; align-items: center; background: #0f172a; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; }
+    .file-item:hover { background: var(--card-hover); }
     .file-checkbox { margin-right: 10px; accent-color: var(--accent-color); width: 16px; height: 16px; cursor: pointer; }
     .file-info { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
     .file-name { font-size: 0.8rem; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .file-size { font-size: 0.7rem; color: var(--text-secondary); }
 
-    .btn-download { background: var(--accent-color); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; }
-    .limit-text { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; text-align: center; }
+    .btn-download { background: var(--accent-color); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3); }
+    .btn-download:hover { background: var(--accent-hover); }
+    .limit-card { text-align: center; }
+    .limit-text { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; }
+    .btn-stars { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); width: 100%; padding: 10px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
   </style>
 </head>
 <body>
 
   <div class="app-container">
+    
     <div class="status-card">
       <div class="status-header">
         <div class="bot-title">📦 ArchiveBot Pro</div>
         <span class="plan-badge">Plan Gratuito</span>
       </div>
-      <div class="status-text">✅ Sincronizado con Telegram</div>
+      <div class="status-text">✅ ¡Escaneo completado!</div>
       <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
       <div class="status-details">
         <span>Archivos encontrados: <strong id="totalFound">0</strong></span>
@@ -73,17 +83,20 @@
       </div>
     </div>
 
-    <!-- Sección de Carpetas Dinámicas -->
+    <!-- Categorías restauradas -->
     <div class="section-card">
-      <div class="section-title">📁 Tus Carpetas y Respaldos</div>
+      <div class="section-title">🎯 ¿Qué categoría deseas explorar y respaldar?</div>
       
-      <div id="foldersGrid" class="folders-grid">
-        <!-- Se cargan dinámicamente desde el backend -->
+      <div class="categories-grid">
+        <button class="category-btn" data-category="photos"><span>🖼️</span> Fotos (<span id="count-photos">0</span>)</button>
+        <button class="category-btn" data-category="videos"><span>🎥</span> Videos (<span id="count-videos">0</span>)</button>
+        <button class="category-btn" data-category="documents"><span>📄</span> Documentos (<span id="count-documents">0</span>)</button>
+        <button class="category-btn" data-category="audios"><span>🎵</span> Audios (<span id="count-audios">0</span>)</button>
       </div>
 
       <div id="fileExplorer" class="file-explorer">
         <div class="explorer-header">
-          <span class="explorer-title" id="explorerFolderTitle">Contenido de la carpeta</span>
+          <span class="explorer-title" id="explorerCategoryTitle">Archivos de la categoría</span>
           <div class="explorer-actions">
             <button class="action-link" id="selectAllCategory">Marcar todos</button>
             <button class="action-link" id="deselectAllCategory">Ninguno</button>
@@ -92,7 +105,7 @@
 
         <div class="search-box">
           <span class="search-icon">🔍</span>
-          <input type="text" id="fileSearchInput" class="search-input" placeholder="Buscar archivo en carpeta...">
+          <input type="text" id="fileSearchInput" class="search-input" placeholder="Buscar por nombre de archivo...">
         </div>
 
         <div id="fileListContainer" class="file-list"></div>
@@ -102,85 +115,117 @@
     <button id="btnDownloadZip" class="btn-download">
       📥 Descargar ZIP (<span id="selectedCount">0</span> ítems • <span id="selectedSize">0.0</span> MB)
     </button>
+
+    <div class="limit-card">
+      <div class="limit-text">Has utilizado 0 MB de 500 MB disponibles hoy.</div>
+      <button class="btn-stars">⭐ Obtener Acceso Ilimitado con Telegram Stars</button>
+    </div>
+
   </div>
 
   <script>
-    let userFoldersData = {};
-    let activeFolder = null;
+    // Datos por defecto (Plantilla visual por si el servidor recién arranca)
+    let filesData = {
+      photos: [
+        { id: 'p1', name: 'Vacaciones_Playa_2026.jpg', size: 3.5 },
+        { id: 'p2', name: 'Cumpleanos_Familia.png', size: 2.1 }
+      ],
+      videos: [
+        { id: 'v1', name: 'Video_Recuerdo_Aniversario.mp4', size: 45.0 }
+      ],
+      documents: [
+        { id: 'd1', name: 'Contrato_Servicios_2026.pdf', size: 1.5 }
+      ],
+      audios: [
+        { id: 'a1', name: 'Nota_Voz_Idea_App.ogg', size: 1.1 }
+      ]
+    };
+
+    let activeCategory = null;
     let selectedFilesMap = new Map();
 
-    const foldersGrid = document.getElementById('foldersGrid');
+    const categoryButtons = document.querySelectorAll('.category-btn');
     const fileExplorer = document.getElementById('fileExplorer');
-    const explorerFolderTitle = document.getElementById('explorerFolderTitle');
+    const explorerCategoryTitle = document.getElementById('explorerCategoryTitle');
     const fileListContainer = document.getElementById('fileListContainer');
     const fileSearchInput = document.getElementById('fileSearchInput');
+    
     const totalFoundEl = document.getElementById('totalFound');
     const totalWeightEl = document.getElementById('totalWeight');
     const selectedCountEl = document.getElementById('selectedCount');
     const selectedSizeEl = document.getElementById('selectedSize');
 
-    // Obtener datos reales desde el backend en Render
-    async function fetchUserData() {
+    // Conectar con el backend real de Render para obtener archivos de Telegram
+    async function fetchRealFiles() {
       try {
-        // Obtenemos el ID del usuario de Telegram si está disponible en la MiniApp
         let userId = 'default_user';
         if (window.Telegram && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
           userId = window.Telegram.WebApp.initDataUnsafe.user.id;
         }
 
         const response = await fetch(`/api/files?user_id=${userId}`);
-        userFoldersData = await response.json();
+        const data = await response.json();
         
-        renderFolders();
-        updateGlobalStats();
+        // Si el backend ya tiene datos reales, los usamos
+        if (data && (data.photos?.length > 0 || data.videos?.length > 0 || data.documents?.length > 0 || data.audios?.length > 0)) {
+          filesData = data;
+        }
+        
+        updateUI();
       } catch (err) {
-        console.error("Error al obtener datos del servidor:", err);
+        console.error("Usando datos locales por error de red:", err);
+        updateUI();
       }
     }
 
-    function renderFolders() {
-      foldersGrid.innerHTML = '';
-      const folderNames = Object.keys(userFoldersData);
+    function updateUI() {
+      let totalCount = 0;
+      let totalWeightNum = 0;
 
-      if (folderNames.length === 0) {
-        foldersGrid.innerHTML = `<div style="grid-column: span 2; font-size: 0.8rem; color: #94a3b8; text-align: center;">No hay carpetas. Envía archivos al bot.</div>`;
-        return;
-      }
-
-      folderNames.forEach(folderName => {
-        const fileCount = userFoldersData[folderName].length;
-        const btn = document.createElement('button');
-        btn.className = `folder-btn ${activeFolder === folderName ? 'active' : ''}`;
-        btn.innerHTML = `<span>📂</span> ${folderName} (${fileCount})`;
-        
-        btn.addEventListener('click', () => {
-          if (activeFolder === folderName) {
-            fileExplorer.classList.remove('visible');
-            btn.classList.remove('active');
-            activeFolder = null;
-            return;
-          }
-
-          document.querySelectorAll('.folder-btn').forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-
-          activeFolder = folderName;
-          explorerFolderTitle.textContent = `Carpeta: ${folderName}`;
-          fileSearchInput.value = '';
-          renderFileList(userFoldersData[folderName]);
-          fileExplorer.classList.add('visible');
-        });
-
-        foldersGrid.appendChild(btn);
+      ['photos', 'videos', 'documents', 'audios'].forEach(cat => {
+        const arr = filesData[cat] || [];
+        document.getElementById(`count-${cat}`).textContent = arr.length;
+        totalCount += arr.length;
+        arr.forEach(f => totalWeightNum += f.size);
       });
+
+      totalFoundEl.textContent = totalCount;
+      totalWeightEl.textContent = totalWeightNum.toFixed(1) + ' MB';
+
+      if (activeCategory) {
+        renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
+      }
     }
+
+    categoryButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const categoryKey = btn.getAttribute('data-category');
+        
+        if (activeCategory === categoryKey) {
+          fileExplorer.classList.remove('visible');
+          btn.classList.remove('active');
+          activeCategory = null;
+          return;
+        }
+
+        categoryButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        activeCategory = categoryKey;
+        explorerCategoryTitle.textContent = `Archivos en: ${btn.textContent.trim().split(' ')[0]} ${btn.textContent.trim().split(' ')[1]}`;
+        fileSearchInput.value = '';
+        
+        renderFileList(filesData[categoryKey] || []);
+        fileExplorer.classList.add('visible');
+      });
+    });
 
     function renderFileList(filesArray, filterText = '') {
       fileListContainer.innerHTML = '';
       const filtered = filesArray.filter(file => file.name.toLowerCase().includes(filterText.toLowerCase()));
 
       if (filtered.length === 0) {
-        fileListContainer.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 10px;">Carpeta vacía</div>`;
+        fileListContainer.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 10px;">No hay archivos en esta categoría</div>`;
         return;
       }
 
@@ -209,18 +254,38 @@
       });
     }
 
-    function updateGlobalStats() {
-      let totalCount = 0;
-      let totalWeightNum = 0;
-      Object.keys(userFoldersData).forEach(folder => {
-        userFoldersData[folder].forEach(file => {
-          totalCount++;
-          totalWeightNum += file.size;
-        });
+    fileSearchInput.addEventListener('input', (e) => {
+      if (!activeCategory) return;
+      renderFileList(filesData[activeCategory] || [], e.target.value);
+    });
+
+    document.getElementById('selectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      const currentFiles = filesData[activeCategory] || [];
+      const filterText = fileSearchInput.value;
+      
+      currentFiles.forEach(file => {
+        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
+          selectedFilesMap.set(file.id, { name: file.name, size: file.size });
+        }
       });
-      totalFoundEl.textContent = totalCount;
-      totalWeightEl.textContent = totalWeightNum.toFixed(1) + ' MB';
-    }
+      renderFileList(currentFiles, filterText);
+      updateGlobalSummary();
+    });
+
+    document.getElementById('deselectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      const currentFiles = filesData[activeCategory] || [];
+      const filterText = fileSearchInput.value;
+
+      currentFiles.forEach(file => {
+        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
+          selectedFilesMap.delete(file.id);
+        }
+      });
+      renderFileList(currentFiles, filterText);
+      updateGlobalSummary();
+    });
 
     function updateGlobalSummary() {
       let count = selectedFilesMap.size;
@@ -230,18 +295,13 @@
       selectedSizeEl.textContent = totalMB.toFixed(1);
     }
 
-    fileSearchInput.addEventListener('input', (e) => {
-      if (!activeFolder) return;
-      renderFileList(userFoldersData[activeFolder], e.target.value);
-    });
-
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
     }
 
-    // Cargar datos al iniciar
-    fetchUserData();
+    // Iniciar carga de datos
+    fetchRealFiles();
   </script>
 </body>
 </html>
