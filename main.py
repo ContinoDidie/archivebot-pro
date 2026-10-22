@@ -1,140 +1,96 @@
-import os
-import logging
-from threading import Thread
-import time
-from datetime import datetime
-from flask import Flask, jsonify, request, send_from_directory
-
-# Configuración de logs
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Configurar Flask para servir archivos estáticos desde la raíz
-app = Flask(__name__, static_folder='.', static_url_path='')
-
-# Almacenamiento en memoria para los archivos reales de Telegram
-user_files_database = {}
-
-# 1. Ruta principal que sirve tu interfaz visual (index.html)
-@app.route('/')
-def serve_index():
-    return send_from_directory('.', 'index.html')
-
-# 2. Ruta API que consulta la MiniApp para obtener los archivos reales por categoría
-@app.route('/api/files', methods=['GET'])
-def get_files():
-    user_id = request.args.get('user_id', 'default_user')
-    
-    # Si el usuario no tiene registros, buscamos si hay datos de otro usuario para mostrarlos de forma global
-    if user_id not in user_files_database:
-        if user_files_database:
-            first_key = list(user_files_database.keys())[0]
-            return jsonify(user_files_database[first_key])
-            
-        user_files_database[user_id] = {
-            "photos": [],
-            "videos": [],
-            "documents": [],
-            "audios": []
-        }
-    return jsonify(user_files_database[user_id])
-
-
 # --- HILO DEL BOT DE TELEGRAM ---
 def run_telegram_bot():
-    time.sleep(3)
+    # Esperar un momento prudente para que el puerto web abra primero
+    time.sleep(5)
     logger.info("Iniciando bucle de Telegram...")
-    try:
-        import telebot
-        TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-        if not TOKEN:
-            logger.error("¡Falta el TELEGRAM_BOT_TOKEN en las variables de entorno!")
-            return
-        
-        bot = telebot.TeleBot(TOKEN)
-        
-        # Limpiar webhooks pendientes para evitar conflictos 409
-        bot.remove_webhook()
-        
-        @bot.message_handler(commands=['start', 'help'])
-        def send_welcome(message):
-            bot.reply_to(message, "¡Hola! Envíame fotos, videos, documentos o audios y aparecerán sincronizados en tu biblioteca web.")
-
-        @bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice'])
-        def handle_user_files(message):
+    
+    import telebot
+    TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+    if not TOKEN:
+        logger.error("¡Falta el TELEGRAM_BOT_TOKEN en las variables de entorno!")
+        return
+    
+    while True:
+        try:
+            bot = telebot.TeleBot(TOKEN)
+            
+            # Limpiar cualquier conexión previa colgada
             try:
-                user_id = str(message.chat.id)
-                
-                if user_id not in user_files_database:
-                    user_files_database[user_id] = {
-                        "photos": [],
-                        "videos": [],
-                        "documents": [],
-                        "audios": []
-                    }
+                bot.remove_webhook()
+            except Exception:
+                pass
+            
+            @bot.message_handler(commands=['start', 'help'])
+            def send_welcome(message):
+                bot.reply_to(message, "¡Hola! Envíame fotos, videos, documentos o audios y aparecerán sincronizados en tu biblioteca web.")
 
-                file_name = "archivo_sin_nombre"
-                file_size_mb = 1.0
-                category = "documents"
-                file_mime = "Desconocido"
+            @bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice'])
+            def handle_user_files(message):
+                try:
+                    user_id = str(message.chat.id)
+                    
+                    if user_id not in user_files_database:
+                        user_files_database[user_id] = {
+                            "photos": [],
+                            "videos": [],
+                            "documents": [],
+                            "audios": []
+                        }
 
-                if message.content_type == 'photo':
-                    category = "photos"
-                    file_name = f"foto_{message.photo[-1].file_unique_id}.jpg"
-                    file_size_mb = round(message.photo[-1].file_size / (1024 * 1024), 2) if hasattr(message.photo[-1], 'file_size') else 1.5
-                    file_mime = "image/jpeg"
-                
-                elif message.content_type == 'document':
+                    file_name = "archivo_sin_nombre"
+                    file_size_mb = 1.0
                     category = "documents"
-                    file_name = message.document.file_name or "documento.pdf"
-                    file_size_mb = round(message.document.file_size / (1024 * 1024), 2)
-                    file_mime = message.document.mime_type or "application/octet-stream"
+                    file_mime = "Desconocido"
 
-                elif message.content_type == 'video':
-                    category = "videos"
-                    file_name = message.video.file_name or f"video_{message.video.file_unique_id}.mp4"
-                    file_size_mb = round(message.video.file_size / (1024 * 1024), 2)
-                    file_mime = message.video.mime_type or "video/mp4"
+                    if message.content_type == 'photo':
+                        category = "photos"
+                        file_name = f"foto_{message.photo[-1].file_unique_id}.jpg"
+                        file_size_mb = round(message.photo[-1].file_size / (1024 * 1024), 2) if hasattr(message.photo[-1], 'file_size') else 1.5
+                        file_mime = "image/jpeg"
+                    
+                    elif message.content_type == 'document':
+                        category = "documents"
+                        file_name = message.document.file_name or "documento.pdf"
+                        file_size_mb = round(message.document.file_size / (1024 * 1024), 2)
+                        file_mime = message.document.mime_type or "application/octet-stream"
 
-                elif message.content_type in ['audio', 'voice']:
-                    category = "audios"
-                    audio_obj = message.audio if message.content_type == 'audio' else message.voice
-                    file_name = getattr(audio_obj, 'file_name', f"audio_{audio_obj.file_unique_id}.ogg")
-                    file_size_mb = round(audio_obj.file_size / (1024 * 1024), 2)
-                    file_mime = getattr(audio_obj, 'mime_type', 'audio/ogg')
+                    elif message.content_type == 'video':
+                        category = "videos"
+                        file_name = message.video.file_name or f"video_{message.video.file_unique_id}.mp4"
+                        file_size_mb = round(message.video.file_size / (1024 * 1024), 2)
+                        file_mime = message.video.mime_type or "video/mp4"
 
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    elif message.content_type in ['audio', 'voice']:
+                        category = "audios"
+                        audio_obj = message.audio if message.content_type == 'audio' else message.voice
+                        file_name = getattr(audio_obj, 'file_name', f"audio_{audio_obj.file_unique_id}.ogg")
+                        file_size_mb = round(audio_obj.file_size / (1024 * 1024), 2)
+                        file_mime = getattr(audio_obj, 'mime_type', 'audio/ogg')
 
-                new_entry = {
-                    "id": str(len(user_files_database[user_id][category]) + 1),
-                    "name": file_name,
-                    "size": file_size_mb,
-                    "mime": file_mime,
-                    "date": now_str,
-                    "category": category
-                }
-                
-                # Evitar duplicados exactos en la misma categoría
-                if not any(f['name'] == file_name for f in user_files_database[user_id][category]):
-                    user_files_database[user_id][category].append(new_entry)
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-                bot.reply_to(message, f"✅ Archivo guardado en [{category}]: {file_name} ({file_size_mb} MB)")
-                logger.info(f"Archivo guardado exitosamente para el usuario {user_id} en {category}: {file_name}")
+                    new_entry = {
+                        "id": str(len(user_files_database[user_id][category]) + 1),
+                        "name": file_name,
+                        "size": file_size_mb,
+                        "mime": file_mime,
+                        "date": now_str,
+                        "category": category
+                    }
+                    
+                    if not any(f['name'] == file_name for f in user_files_database[user_id][category]):
+                        user_files_database[user_id][category].append(new_entry)
 
-            except Exception as e:
-                logger.error(f"Error procesando archivo de Telegram: {e}")
-                bot.reply_to(message, "Hubo un error al procesar tu archivo.")
+                    bot.reply_to(message, f"✅ Archivo guardado en [{category}]: {file_name} ({file_size_mb} MB)")
+                    logger.info(f"Archivo guardado exitosamente para el usuario {user_id} en {category}: {file_name}")
 
-        # Polling continuo y seguro
-        bot.infinity_polling(timeout=10, long_polling_timeout=5, skip_pending=True)
-    except Exception as e:
-        logger.error(f"Error en el hilo del bot: {e}")
+                except Exception as e:
+                    logger.error(f"Error procesando archivo de Telegram: {e}")
+                    bot.reply_to(message, "Hubo un error al procesar tu archivo.")
 
-# Iniciar el hilo del bot en segundo plano
-bot_thread = Thread(target=run_telegram_bot, daemon=True)
-bot_thread.start()
-
-# --- 3. ARRANQUE PRINCIPAL (GUNICORN / FLASK) ---
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+            logger.info("Bot de Telegram conectado y escuchando mensajes...")
+            bot.infinity_polling(timeout=10, long_polling_timeout=5, skip_pending=True)
+            
+        except Exception as e:
+            logger.error(f"Conflicto o desconexión en el bot ({e}). Reintentando en 10 segundos...")
+            time.sleep(10)
