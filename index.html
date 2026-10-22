@@ -44,7 +44,6 @@
     .explorer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .explorer-title { font-size: 0.85rem; font-weight: 600; color: var(--accent-color); }
     .action-link { background: none; border: none; color: var(--text-secondary); font-size: 0.75rem; cursor: pointer; text-decoration: underline; }
-    .action-link:hover { color: var(--text-main); }
 
     .search-box { position: relative; margin-bottom: 10px; }
     .search-input { width: 100%; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px 8px 32px; color: var(--text-main); font-size: 0.85rem; outline: none; }
@@ -60,10 +59,15 @@
     .file-size { font-size: 0.7rem; color: var(--text-secondary); }
 
     .btn-download { background: var(--accent-color); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3); }
-    .btn-download:hover { background: var(--accent-hover); }
-    .limit-card { text-align: center; }
-    .limit-text { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; }
-    .btn-stars { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); width: 100%; padding: 10px; border-radius: 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+
+    /* Estilos del Modal / Ventana Emergente */
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 999; justify-content: center; align-items: center; padding: 16px; }
+    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
+    .modal-card { background: var(--card-bg); border: 1px solid var(--accent-color); border-radius: 16px; width: 100%; max-width: 360px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; }
+    .modal-title { font-size: 1rem; font-weight: 700; color: var(--accent-color); word-break: break-all; }
+    .modal-detail { font-size: 0.82rem; color: var(--text-secondary); display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+    .modal-detail span { color: var(--text-main); font-weight: 500; }
+    .btn-close-modal { background: var(--card-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 6px; }
   </style>
 </head>
 <body>
@@ -83,7 +87,6 @@
       </div>
     </div>
 
-    <!-- Categorías restauradas -->
     <div class="section-card">
       <div class="section-title">🎯 ¿Qué categoría deseas explorar y respaldar?</div>
       
@@ -116,31 +119,23 @@
       📥 Descargar ZIP (<span id="selectedCount">0</span> ítems • <span id="selectedSize">0.0</span> MB)
     </button>
 
-    <div class="limit-card">
-      <div class="limit-text">Has utilizado 0 MB de 500 MB disponibles hoy.</div>
-      <button class="btn-stars">⭐ Obtener Acceso Ilimitado con Telegram Stars</button>
-    </div>
+  </div>
 
+  <!-- Modal Emergente de Detalles -->
+  <div id="fileModal" class="modal-overlay">
+    <div class="modal-card">
+      <div id="modalFileName" class="modal-title">Nombre_Archivo.jpg</div>
+      <div class="modal-detail">ID: <span id="modalFileId">--</span></div>
+      <div class="modal-detail">Categoría: <span id="modalFileCategory">--</span></div>
+      <div class="modal-detail">Tamaño: <span id="modalFileSize">-- MB</span></div>
+      <div class="modal-detail">Tipo MIME: <span id="modalFileMime">--</span></div>
+      <div class="modal-detail">Fecha: <span id="modalFileDate">--</span></div>
+      <button class="btn-close-modal" id="btnCloseModal">Cerrar Detalle</button>
+    </div>
   </div>
 
   <script>
-    // Datos por defecto (Plantilla visual por si el servidor recién arranca)
-    let filesData = {
-      photos: [
-        { id: 'p1', name: 'Vacaciones_Playa_2026.jpg', size: 3.5 },
-        { id: 'p2', name: 'Cumpleanos_Familia.png', size: 2.1 }
-      ],
-      videos: [
-        { id: 'v1', name: 'Video_Recuerdo_Aniversario.mp4', size: 45.0 }
-      ],
-      documents: [
-        { id: 'd1', name: 'Contrato_Servicios_2026.pdf', size: 1.5 }
-      ],
-      audios: [
-        { id: 'a1', name: 'Nota_Voz_Idea_App.ogg', size: 1.1 }
-      ]
-    };
-
+    let filesData = { photos: [], videos: [], documents: [], audios: [] };
     let activeCategory = null;
     let selectedFilesMap = new Map();
 
@@ -150,12 +145,9 @@
     const fileListContainer = document.getElementById('fileListContainer');
     const fileSearchInput = document.getElementById('fileSearchInput');
     
-    const totalFoundEl = document.getElementById('totalFound');
-    const totalWeightEl = document.getElementById('totalWeight');
-    const selectedCountEl = document.getElementById('selectedCount');
-    const selectedSizeEl = document.getElementById('selectedSize');
+    const fileModal = document.getElementById('fileModal');
+    const btnCloseModal = document.getElementById('btnCloseModal');
 
-    // Conectar con el backend real de Render para obtener archivos de Telegram
     async function fetchRealFiles() {
       try {
         let userId = 'default_user';
@@ -165,16 +157,10 @@
 
         const response = await fetch(`/api/files?user_id=${userId}`);
         const data = await response.json();
-        
-        // Si el backend ya tiene datos reales, los usamos
-        if (data && (data.photos?.length > 0 || data.videos?.length > 0 || data.documents?.length > 0 || data.audios?.length > 0)) {
-          filesData = data;
-        }
-        
+        filesData = data;
         updateUI();
       } catch (err) {
-        console.error("Usando datos locales por error de red:", err);
-        updateUI();
+        console.error("Error cargando archivos del servidor:", err);
       }
     }
 
@@ -189,8 +175,8 @@
         arr.forEach(f => totalWeightNum += f.size);
       });
 
-      totalFoundEl.textContent = totalCount;
-      totalWeightEl.textContent = totalWeightNum.toFixed(1) + ' MB';
+      document.getElementById('totalFound').textContent = totalCount;
+      document.getElementById('totalWeight').textContent = totalWeightNum.toFixed(1) + ' MB';
 
       if (activeCategory) {
         renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
@@ -200,7 +186,6 @@
     categoryButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const categoryKey = btn.getAttribute('data-category');
-        
         if (activeCategory === categoryKey) {
           fileExplorer.classList.remove('visible');
           btn.classList.remove('active');
@@ -214,7 +199,6 @@
         activeCategory = categoryKey;
         explorerCategoryTitle.textContent = `Archivos en: ${btn.textContent.trim().split(' ')[0]} ${btn.textContent.trim().split(' ')[1]}`;
         fileSearchInput.value = '';
-        
         renderFileList(filesData[categoryKey] || []);
         fileExplorer.classList.add('visible');
       });
@@ -231,7 +215,7 @@
 
       filtered.forEach(file => {
         const isChecked = selectedFilesMap.has(file.id);
-        const item = document.createElement('label');
+        const item = document.createElement('div');
         item.className = 'file-item';
         item.innerHTML = `
           <input type="checkbox" class="file-checkbox" value="${file.id}" ${isChecked ? 'checked' : ''} />
@@ -241,8 +225,11 @@
           </div>
         `;
 
-        item.querySelector('input').addEventListener('change', (e) => {
-          if (e.target.checked) {
+        // Checkbox para selección de ZIP
+        const checkbox = item.querySelector('.file-checkbox');
+        checkbox.addEventListener('click', (e) => {
+          e.stopPropagation(); // Evitar abrir la modal al tocar la casilla
+          if (checkbox.checked) {
             selectedFilesMap.set(file.id, { name: file.name, size: file.size });
           } else {
             selectedFilesMap.delete(file.id);
@@ -250,49 +237,41 @@
           updateGlobalSummary();
         });
 
+        // Tocar el cuerpo del archivo despliega la modal con los detalles
+        item.querySelector('.file-info').addEventListener('click', () => {
+          openFileModal(file);
+        });
+
         fileListContainer.appendChild(item);
       });
     }
+
+    function openFileModal(file) {
+      document.getElementById('modalFileName').textContent = file.name;
+      document.getElementById('modalFileId').textContent = file.id || 'N/A';
+      document.getElementById('modalFileCategory').textContent = activeCategory || 'N/A';
+      document.getElementById('modalFileSize').textContent = `${file.size} MB`;
+      document.getElementById('modalFileMime').textContent = file.mime || 'Desconocido';
+      document.getElementById('modalFileDate').textContent = file.date || 'Reciente';
+
+      fileModal.classList.add('active');
+    }
+
+    btnCloseModal.addEventListener('click', () => {
+      fileModal.classList.remove('active');
+    });
 
     fileSearchInput.addEventListener('input', (e) => {
       if (!activeCategory) return;
       renderFileList(filesData[activeCategory] || [], e.target.value);
     });
 
-    document.getElementById('selectAllCategory').addEventListener('click', () => {
-      if (!activeCategory) return;
-      const currentFiles = filesData[activeCategory] || [];
-      const filterText = fileSearchInput.value;
-      
-      currentFiles.forEach(file => {
-        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
-          selectedFilesMap.set(file.id, { name: file.name, size: file.size });
-        }
-      });
-      renderFileList(currentFiles, filterText);
-      updateGlobalSummary();
-    });
-
-    document.getElementById('deselectAllCategory').addEventListener('click', () => {
-      if (!activeCategory) return;
-      const currentFiles = filesData[activeCategory] || [];
-      const filterText = fileSearchInput.value;
-
-      currentFiles.forEach(file => {
-        if (file.name.toLowerCase().includes(filterText.toLowerCase())) {
-          selectedFilesMap.delete(file.id);
-        }
-      });
-      renderFileList(currentFiles, filterText);
-      updateGlobalSummary();
-    });
-
     function updateGlobalSummary() {
       let count = selectedFilesMap.size;
       let totalMB = 0;
       selectedFilesMap.forEach(file => { totalMB += file.size; });
-      selectedCountEl.textContent = count;
-      selectedSizeEl.textContent = totalMB.toFixed(1);
+      document.getElementById('selectedCount').textContent = count;
+      document.getElementById('selectedSize').textContent = totalMB.toFixed(1);
     }
 
     if (window.Telegram && window.Telegram.WebApp) {
@@ -300,7 +279,6 @@
       window.Telegram.WebApp.expand();
     }
 
-    // Iniciar carga de datos
     fetchRealFiles();
   </script>
 </body>
