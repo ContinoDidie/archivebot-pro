@@ -1,18 +1,14 @@
 import os
 import io
-import hmac
-import hashlib
-import json
 import sqlite3
 import logging
 import threading
 import time
 import zipfile
+import urllib.request
+import json
 
 from datetime import datetime, timezone
-from urllib.parse import parse_qsl
-from functools import wraps
-
 from flask import Flask, jsonify, request, send_file, send_from_directory
 from flask_cors import CORS
 import telebot
@@ -42,7 +38,6 @@ DATABASE_PATH = os.environ.get(
 )
 
 MAX_FILES_PER_ZIP = 50
-MAX_INIT_DATA_AGE = 86400
 
 app = Flask(__name__, static_folder='.', static_url_path='')
 
@@ -59,9 +54,6 @@ CORS(
     ],
     methods=["GET", "POST", "OPTIONS"]
 )
-
-api_bot = None
-bot_lock = threading.Lock()
 
 
 # =========================================================
@@ -87,9 +79,9 @@ def init_db():
                 file_id TEXT NOT NULL,
                 file_unique_id TEXT,
                 name TEXT NOT NULL,
-                size INTEGER DEFAULT 0,
+                size REAL DEFAULT 0,
                 mime_type TEXT DEFAULT '',
-                category TEXT DEFAULT 'documentos',
+                category TEXT DEFAULT 'documents',
                 created_at TEXT NOT NULL
             )
         """)
@@ -126,7 +118,7 @@ def save_file(
                 (user_id, file_unique_id)
             ).fetchone()
 
-        size_mb = round(size / (1024 * 1024), 2) if size else 0.1
+        size_mb = round(size / (1024 * 1024), 2) if size else 0.05
 
         if existing:
             connection.execute(
@@ -222,9 +214,104 @@ def get_files():
         return jsonify(global_library)
     except Exception as e:
         logger.error(f"Error en /api/files: {e}")
-        return jsonify({"photos": [], "videos": [], "documents": [], "audios": []})
+        return jsonify({"error": strStr(e) if 'strStr' in globals() else str(e)}), 500
     finally:
         connection.close()
+
+
+@app.route('/api/file/<file_id>', methods=['GET'])
+def get_single_file(file_id):
+    connection = get_db()
+    try:
+        row = connection.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+        if not row:
+            return jsonify({"error": "Archivo no encontrado en la base de datos."}), 404
+        
+        tg_file_id = row["file_id"]
+        file_name = row["name"]
+        mime_type = row["mime_type"] or "application/octet-stream"
+        is_download = request.args.get("download") == "1"
+
+        if not BOT_TOKEN:
+            return jsonify({"error": "Falta configurar el token del bot."}), 500
+
+        # Obtener ruta de Telegram
+        url_info = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={tg_file_id}"
+        req = urllib.request.urlopen(url_info)
+        res_data = json.loads(req.read().decode('utf-8'))
+        
+        if not res_data.get("ok"):
+            return jsonify({"error": "No se pudo recuperar el archivo desde los servidores de Telegram."}), 400
+            
+        file_path = res_data["result"]["file_path"]
+        telegram_file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+
+        # Descargar el contenido en memoria para entregarlo al cliente
+        with urllib.request.urlopen(telegram_file_url) as file_resp:
+            file_bytes = file_resp.read()
+
+        return send_file(
+            io.BytesIO(file_bytes),
+            mimetype=mime_type,
+            as_attachment=is_download,
+            download_name=file_name
+        )
+
+    except Exception as e:
+        logger.error(f"Error al servir archivo {file_id}: {e}")
+        return jsonify({"error": "Error interno al recuperar el archivo."}), 500
+    finally:
+        connection.close()
+
+
+@app.route('/api/zip', methods=['POST'])
+def create_zip():
+    try:
+        data = request.get_json() or {}
+        file_ids = data.get("ids", [])
+
+        if not file_ids:
+            return jsonify({"error": "No se seleccionó ningún archivo."}), 400
+
+        if len(file_ids) > MAX_FILES_PER_ZIP:
+            return jsonify({"error": f"Límite máximo de {MAX_FILES_PER_ZIP} archivos por ZIP superado."}), 400
+
+        connection = get_db()
+        placeholders = ','.join(['?'] * len(file_ids))
+        rows = connection.execute(f"SELECT * FROM files WHERE id IN ({placeholders})", file_ids).fetchall()
+        connection.close()
+
+        if not rows:
+            return jsonify({"error": "No se encontraron archivos válidos."}), 404
+
+        memory_zip = io.BytesIO()
+        with zipfile.ZipFile(memory_zip, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for row in rows:
+                try:
+                    url_info = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={row['file_id']}"
+                    req = urllib.request.urlopen(url_info)
+                    res_data = json.loads(req.read().decode('utf-8'))
+                    
+                    if res_data.get("ok"):
+                        file_path = res_data["result"]["file_path"]
+                        download_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
+                        
+                        with urllib.request.urlopen(download_url) as f_resp:
+                            zf.writestr(row["name"], f_resp.read())
+                except Exception as ex:
+                    logger.error(f"Error al empaquetar archivo {row['name']} en ZIP: {ex}")
+
+        memory_zip.seek(0)
+        return send_file(
+            memory_zip,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name="ArchiveBot_Pro.zip"
+        )
+
+    except Exception as e:
+        logger.error(f"Error creando ZIP: {e}")
+        return jsonify({"error": "Error al generar el archivo ZIP."}), 500
 
 
 # =========================================================
@@ -322,40 +409,6 @@ def run_telegram_bot():
 # =========================================================
 # INICIO DE LA APLICACIÓN
 # =========================================================
-@app.route('/api/download/<int:file_id>', methods=['GET'])
-def download_file(file_id):
-    connection = get_db()
-    try:
-        row = connection.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
-        if not row:
-            return "Archivo no encontrado", 404
-        
-        tg_file_id = row["file_id"]
-        file_name = row["name"]
-        
-        # Consultar la ruta real del archivo en los servidores de Telegram
-        token = BOT_TOKEN
-        import urllib.request
-        import json
-        
-        url_info = f"https://api.telegram.org/bot{token}/getFile?file_id={tg_file_id}"
-        req = urllib.request.urlopen(url_info)
-        res_data = json.loads(req.read().decode('utf-8'))
-        
-        if not res_data.get("ok"):
-            return "No se pudo recuperar el archivo de Telegram", 400
-            
-        file_path = res_data["result"]["file_path"]
-        download_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
-        
-        # Redirigir directamente al enlace seguro de descarga de Telegram
-        return jsonify({"download_url": download_url})
-        
-    except Exception as e:
-        logger.error(f"Error en descarga: {e}")
-        return "Error interno al procesar la descarga", 500
-    finally:
-        connection.close()
 
 if __name__ == '__main__':
     init_db()
