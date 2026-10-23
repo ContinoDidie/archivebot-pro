@@ -1,84 +1,186 @@
 import os
 import time
 import logging
-from datetime import datetime
-from flask import Flask, jsonify, request, send_from_directory
 import threading
-import telebot
+from datetime import datetime
 
-# Configuración de logs
-logging.basicConfig(level=logging.INFO)
+from flask import Flask, jsonify, request, send_from_directory
+import telebot
+from flask_cors import CORS
+
+# =========================================================
+# CONFIGURACIÓN GENERAL
+# =========================================================
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
+
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__, static_folder='.', static_url_path='')
+app = Flask(__name__, static_folder=".", static_url_path="")
 
-# Base de datos en memoria (volatile)
+# Permitir que la Mini App alojada en GitHub Pages
+# se comunique con el backend alojado en Render.
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "https://continodidie.github.io"
+            ]
+        }
+    },
+    methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=600
+)
+
+# Base de datos temporal en memoria.
+# IMPORTANTE: los datos se pierden si el proceso se reinicia.
 user_files_database = {}
 
-# --- RUTAS WEB Y API ---
-@app.route('/')
+# =========================================================
+# RUTAS WEB
+# =========================================================
+
+@app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    return send_from_directory(".", "index.html")
 
-@app.route('/health')
+
+@app.route("/health")
 def health_check():
-    return "OK", 200
+    return jsonify({
+        "status": "ok",
+        "service": "ArchiveBot Pro",
+        "time": datetime.utcnow().isoformat() + "Z"
+    }), 200
 
-@app.route('/api/files', methods=['GET'])
+
+# =========================================================
+# API DE ARCHIVOS
+# =========================================================
+
+@app.route("/api/files", methods=["GET", "OPTIONS"])
 def get_files():
-    # Biblioteca global unificada
+
+    # Flask-CORS gestiona las cabeceras CORS.
+    if request.method == "OPTIONS":
+        return "", 204
+
     global_library = {
         "photos": [],
         "videos": [],
         "documents": [],
         "audios": []
     }
-    
-    # Recorremos absolutamente todas las claves del diccionario de memoria
+
+    # Mantener el comportamiento de biblioteca global
+    # de la versión original.
     for uid, categories in user_files_database.items():
-        if isinstance(categories, dict):
-            for cat in ["photos", "videos", "documents", "audios"]:
-                if cat in categories and isinstance(categories[cat], list):
-                    for file in categories[cat]:
-                        # Evitamos duplicados por nombre
-                        if not any(f.get('name') == file.get('name') for f in global_library[cat]):
-                            global_library[cat].append(file)
-                            
-    logger.info(f"API /api/files consultada. Fotos: {len(global_library['photos'])}, Videos: {len(global_library['videos'])}, Documentos: {len(global_library['documents'])}, Audios: {len(global_library['audios'])}")
-    return jsonify(global_library)
+
+        if not isinstance(categories, dict):
+            continue
+
+        for category in global_library:
+
+            entries = categories.get(category, [])
+
+            if not isinstance(entries, list):
+                continue
+
+            for file_entry in entries:
+
+                if not isinstance(file_entry, dict):
+                    continue
+
+                # Evitar duplicados por nombre.
+                duplicate = any(
+                    existing.get("name") == file_entry.get("name")
+                    for existing in global_library[category]
+                )
+
+                if not duplicate:
+                    global_library[category].append(file_entry)
+
+    logger.info(
+        "API /api/files consultada | "
+        "Fotos: %s | Videos: %s | Documentos: %s | Audios: %s",
+        len(global_library["photos"]),
+        len(global_library["videos"]),
+        len(global_library["documents"]),
+        len(global_library["audios"])
+    )
+
+    return jsonify(global_library), 200
 
 
-# --- HILO DEL BOT DE TELEGRAM ---
+# =========================================================
+# BOT DE TELEGRAM
+# =========================================================
+
 def run_telegram_bot():
-    # Esperar un momento prudente para que el puerto web abra primero
+
     time.sleep(3)
+
     logger.info("Iniciando configuración del bot de Telegram...")
-    
-    TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-    if not TOKEN:
-        logger.error("¡Falta el TELEGRAM_BOT_TOKEN en las variables de entorno!")
+
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+
+    if not token:
+        logger.error(
+            "Falta TELEGRAM_BOT_TOKEN en las variables de entorno de Render."
+        )
         return
-    
-    bot = telebot.TeleBot(TOKEN)
-    
-    # Limpiar cualquier conexión previa colgada
+
+    bot = telebot.TeleBot(token)
+
     try:
         bot.remove_webhook()
-    except Exception:
-        pass
-    
-    @bot.message_handler(commands=['start', 'help'])
-    def send_welcome(message):
-        try:
-            bot.reply_to(message, "¡Hola! Envíame fotos, videos, documentos o audios y aparecerán sincronizados en tu biblioteca web.")
-        except Exception as e:
-            logger.error(f"Error en send_welcome: {e}")
+        logger.info("Webhook anterior eliminado.")
+    except Exception as error:
+        logger.warning("No se pudo eliminar el webhook: %s", error)
 
-    @bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice'])
+    # -----------------------------------------------------
+    # COMANDO START
+    # -----------------------------------------------------
+
+    @bot.message_handler(commands=["start", "help"])
+    def send_welcome(message):
+
+        try:
+            bot.reply_to(
+                message,
+                "¡Hola! 👋\n\n"
+                "Envíame fotos, vídeos, documentos o audios "
+                "para añadirlos a la biblioteca de ArchiveBot Pro.\n\n"
+                "Abre la Mini App desde Telegram para consultar "
+                "la biblioteca disponible."
+            )
+
+        except Exception as error:
+            logger.error("Error en send_welcome: %s", error)
+
+    # -----------------------------------------------------
+    # RECEPCIÓN DE ARCHIVOS
+    # -----------------------------------------------------
+
+    @bot.message_handler(
+        content_types=[
+            "photo",
+            "document",
+            "video",
+            "audio",
+            "voice"
+        ]
+    )
     def handle_user_files(message):
+
         try:
             user_id = str(message.chat.id)
-            
+
             if user_id not in user_files_database:
                 user_files_database[user_id] = {
                     "photos": [],
@@ -88,85 +190,224 @@ def run_telegram_bot():
                 }
 
             file_name = "archivo_sin_nombre"
-            file_size_mb = 1.0
+            file_size_mb = 0.1
             category = "documents"
-            file_mime = "Desconocido"
+            file_mime = "application/octet-stream"
 
-            if message.content_type == 'photo':
+            # FOTO
+            if message.content_type == "photo":
+
                 category = "photos"
+
                 if message.photo:
-                    p = message.photo[-1]
-                    file_name = f"foto_{getattr(p, 'file_unique_id', 'unknown')}.jpg"
-                    size_bytes = getattr(p, 'file_size', 102400) or 102400
-                    file_size_mb = round(size_bytes / (1024 * 1024), 2)
+                    photo = message.photo[-1]
+
+                    file_name = (
+                        f"foto_{photo.file_unique_id}.jpg"
+                    )
+
+                    size_bytes = (
+                        getattr(photo, "file_size", None) or 102400
+                    )
+
+                    file_size_mb = round(
+                        size_bytes / (1024 * 1024), 2
+                    )
+
                 file_mime = "image/jpeg"
-            
-            elif message.content_type == 'document' and message.document:
+
+            # DOCUMENTO
+            elif (
+                message.content_type == "document"
+                and message.document
+            ):
+
+                document = message.document
                 category = "documents"
-                doc = message.document
-                file_name = getattr(doc, 'file_name', None) or "documento.pdf"
-                size_bytes = getattr(doc, 'file_size', 102400) or 102400
-                file_size_mb = round(size_bytes / (1024 * 1024), 2)
-                file_mime = getattr(doc, 'mime_type', 'application/octet-stream')
 
-            elif message.content_type == 'video' and message.video:
+                file_name = (
+                    getattr(document, "file_name", None)
+                    or f"documento_{document.file_unique_id}"
+                )
+
+                size_bytes = (
+                    getattr(document, "file_size", None) or 102400
+                )
+
+                file_size_mb = round(
+                    size_bytes / (1024 * 1024), 2
+                )
+
+                file_mime = (
+                    getattr(document, "mime_type", None)
+                    or "application/octet-stream"
+                )
+
+            # VÍDEO
+            elif (
+                message.content_type == "video"
+                and message.video
+            ):
+
+                video = message.video
                 category = "videos"
-                vid = message.video
-                file_name = getattr(vid, 'file_name', None) or f"video_{getattr(vid, 'file_unique_id', 'unknown')}.mp4"
-                size_bytes = getattr(vid, 'file_size', 102400) or 102400
-                file_size_mb = round(size_bytes / (1024 * 1024), 2)
-                file_mime = getattr(vid, 'mime_type', 'video/mp4')
 
-            elif message.content_type in ['audio', 'voice']:
+                file_name = (
+                    getattr(video, "file_name", None)
+                    or f"video_{video.file_unique_id}.mp4"
+                )
+
+                size_bytes = (
+                    getattr(video, "file_size", None) or 102400
+                )
+
+                file_size_mb = round(
+                    size_bytes / (1024 * 1024), 2
+                )
+
+                file_mime = (
+                    getattr(video, "mime_type", None)
+                    or "video/mp4"
+                )
+
+            # AUDIO O MENSAJE DE VOZ
+            elif message.content_type in ["audio", "voice"]:
+
+                audio_obj = (
+                    message.audio
+                    if message.content_type == "audio"
+                    else message.voice
+                )
+
                 category = "audios"
-                audio_obj = message.audio if message.content_type == 'audio' else message.voice
-                if audio_obj:
-                    file_name = getattr(audio_obj, 'file_name', None) or f"audio_{getattr(audio_obj, 'file_unique_id', 'unknown')}.ogg"
-                    size_bytes = getattr(audio_obj, 'file_size', 102400) or 102400
-                    file_size_mb = round(size_bytes / (1024 * 1024), 2)
-                    file_mime = getattr(audio_obj, 'mime_type', 'audio/ogg')
 
-            now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                if audio_obj:
+
+                    file_name = (
+                        getattr(audio_obj, "file_name", None)
+                        or f"audio_{audio_obj.file_unique_id}.ogg"
+                    )
+
+                    size_bytes = (
+                        getattr(audio_obj, "file_size", None) or 102400
+                    )
+
+                    file_size_mb = round(
+                        size_bytes / (1024 * 1024), 2
+                    )
+
+                    file_mime = (
+                        getattr(audio_obj, "mime_type", None)
+                        or "audio/ogg"
+                    )
+
+            now_str = datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+
+            entries = user_files_database[user_id][category]
+
+            # Evitar duplicar el mismo archivo en la misma categoría.
+            existing = any(
+                entry.get("name") == file_name
+                for entry in entries
+            )
+
+            if existing:
+
+                bot.reply_to(
+                    message,
+                    f"ℹ️ Este archivo ya está registrado: {file_name}"
+                )
+
+                return
 
             new_entry = {
-                "id": str(len(user_files_database[user_id][category]) + 1),
+                "id": str(len(entries) + 1),
                 "name": file_name,
                 "size": file_size_mb,
                 "mime": file_mime,
                 "date": now_str,
                 "category": category
             }
-            
-            # Evitar duplicados exactos
-            if not any(f['name'] == file_name for f in user_files_database[user_id][category]):
-                user_files_database[user_id][category].append(new_entry)
 
-            bot.reply_to(message, f"✅ Archivo guardado en [{category}]: {file_name} ({file_size_mb} MB)")
-            logger.info(f"Archivo guardado exitosamente para el usuario {user_id} en {category}: {file_name}")
+            entries.append(new_entry)
 
-        except Exception as e:
-            logger.error(f"Error procesando archivo de Telegram: {e}")
+            bot.reply_to(
+                message,
+                f"✅ Archivo registrado en {category}:\n"
+                f"{file_name}\n"
+                f"📦 Tamaño aproximado: {file_size_mb} MB"
+            )
+
+            logger.info(
+                "Archivo registrado para usuario %s | %s | %s",
+                user_id,
+                category,
+                file_name
+            )
+
+        except Exception as error:
+
+            logger.exception(
+                "Error procesando archivo de Telegram"
+            )
+
             try:
-                bot.reply_to(message, "Hubo un error al procesar tu archivo.")
-            except:
+                bot.reply_to(
+                    message,
+                    "❌ Hubo un error al procesar el archivo. "
+                    "Inténtalo de nuevo."
+                )
+            except Exception:
                 pass
 
-    # Bucle de escucha continuo con reconexión automática ante conflictos o cortes de red
+    # -----------------------------------------------------
+    # ESCUCHA CONTINUA DEL BOT
+    # -----------------------------------------------------
+
     while True:
+
         try:
-            logger.info("Bot de Telegram conectado y escuchando mensajes...")
-            bot.infinity_polling(timeout=20, long_polling_timeout=20, skip_pending=True)
-        except Exception as e:
-            logger.error(f"Desconexión o conflicto en el bot ({e}). Reintentando en 10 segundos...")
+            logger.info(
+                "Bot de Telegram conectado y escuchando mensajes..."
+            )
+
+            bot.infinity_polling(
+                timeout=20,
+                long_polling_timeout=20,
+                skip_pending=True
+            )
+
+        except Exception as error:
+
+            logger.exception(
+                "Desconexión o conflicto del bot: %s",
+                error
+            )
+
             time.sleep(10)
 
 
-# --- INICIO DE LA APLICACIÓN ---
-if __name__ == '__main__':
-    # Lanzar el bot de Telegram en un hilo en segundo plano
-    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
+# =========================================================
+# INICIO DEL SERVIDOR
+# =========================================================
+
+if __name__ == "__main__":
+
+    bot_thread = threading.Thread(
+        target=run_telegram_bot,
+        daemon=True
+    )
+
     bot_thread.start()
-    
-    # Iniciar el servidor Flask
+
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+
+    logger.info("Iniciando servidor Flask en el puerto %s", port)
+
+    app.run(
+        host="0.0.0.0",
+        port=port,
+        threaded=True
+    )
