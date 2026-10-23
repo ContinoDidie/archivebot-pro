@@ -1,10 +1,55 @@
+import os
+import time
+import logging
+from datetime import datetime
+from flask import Flask, jsonify, request, send_from_directory
+import threading
+import telebot
+
+# Configuración de logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__, static_folder='.', static_url_path='')
+
+# Base de datos en memoria (volatile)
+user_files_database = {}
+
+# --- RUTAS WEB Y API ---
+@app.route('/')
+def index():
+    return send_from_directory('.', 'index.html')
+
+@app.route('/health')
+def health_check():
+    return "OK", 200
+
+@app.route('/api/files', methods=['GET'])
+def get_files():
+    # Biblioteca unificada que junta todos los archivos de cualquier usuario para la MiniApp
+    global_library = {
+        "photos": [],
+        "videos": [],
+        "documents": [],
+        "audios": []
+    }
+    
+    for uid, categories in user_files_database.items():
+        for cat in ["photos", "videos", "documents", "audios"]:
+            if cat in categories:
+                for file in categories[cat]:
+                    if not any(f['name'] == file['name'] for f in global_library[cat]):
+                        global_library[cat].append(file)
+                        
+    return jsonify(global_library)
+
+
 # --- HILO DEL BOT DE TELEGRAM ---
 def run_telegram_bot():
     # Esperar un momento prudente para que el puerto web abra primero
     time.sleep(3)
     logger.info("Iniciando configuración del bot de Telegram...")
     
-    import telebot
     TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     if not TOKEN:
         logger.error("¡Falta el TELEGRAM_BOT_TOKEN en las variables de entorno!")
@@ -110,3 +155,14 @@ def run_telegram_bot():
         except Exception as e:
             logger.error(f"Desconexión o conflicto en el bot ({e}). Reintentando en 10 segundos...")
             time.sleep(10)
+
+
+# --- INICIO DE LA APLICACIÓN ---
+if __name__ == '__main__':
+    # Lanzar el bot de Telegram en un hilo en segundo plano
+    bot_thread = threading.Thread(target=run_telegram_bot, daemon=True)
+    bot_thread.start()
+    
+    # Iniciar el servidor Flask
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
