@@ -156,12 +156,13 @@
 
     async function fetchRealFiles() {
       try {
-        let userId = 'default_user';
-        if (window.Telegram && window.Telegram.WebApp.initDataUnsafe?.user?.id) {
-          userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-        }
-
-        const response = await fetch(`/api/files?user_id=${userId}`);
+        document.getElementById('statusMessage').textContent = "🔄 Sincronizando...";
+        
+        // Se añade un parámetro de tiempo (?t=...) y no-store para evitar caché en Telegram
+        const response = await fetch(`/api/files?t=${new Date().getTime()}`, {
+          cache: "no-store"
+        });
+        
         if (!response.ok) throw new Error("Error al conectar con la API");
 
         const data = await response.json();
@@ -182,7 +183,7 @@
         const arr = filesData[cat] || [];
         document.getElementById(`count-${cat}`).textContent = arr.length;
         totalCount += arr.length;
-        arr.forEach(f => totalWeightNum += f.size);
+        arr.forEach(f => totalWeightNum += Number(f.size || 0));
       });
 
       document.getElementById('totalFound').textContent = totalCount;
@@ -257,7 +258,7 @@
     function openFileModal(file) {
       document.getElementById('modalFileName').textContent = file.name;
       document.getElementById('modalFileId').textContent = file.id || 'N/A';
-      document.getElementById('modalFileCategory').textContent = activeCategory || 'N/A';
+      document.getElementById('modalFileCategory').textContent = activeCategory ? activeCategory.toUpperCase() : 'N/A';
       document.getElementById('modalFileSize').textContent = `${file.size} MB`;
       document.getElementById('modalFileMime').textContent = file.mime || 'Desconocido';
       document.getElementById('modalFileDate').textContent = file.date || 'Reciente';
@@ -278,10 +279,28 @@
       renderFileList(filesData[activeCategory] || [], e.target.value);
     });
 
+    document.getElementById('selectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      (filesData[activeCategory] || []).forEach(file => {
+        selectedFilesMap.set(file.id, { name: file.name, size: file.size });
+      });
+      renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
+      updateGlobalSummary();
+    });
+
+    document.getElementById('deselectAllCategory').addEventListener('click', () => {
+      if (!activeCategory) return;
+      (filesData[activeCategory] || []).forEach(file => {
+        selectedFilesMap.delete(file.id);
+      });
+      renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
+      updateGlobalSummary();
+    });
+
     function updateGlobalSummary() {
       let count = selectedFilesMap.size;
       let totalMB = 0;
-      selectedFilesMap.forEach(file => { totalMB += file.size; });
+      selectedFilesMap.forEach(file => { totalMB += Number(file.size || 0); });
       document.getElementById('selectedCount').textContent = count;
       document.getElementById('selectedSize').textContent = totalMB.toFixed(1);
     }
