@@ -322,6 +322,40 @@ def run_telegram_bot():
 # =========================================================
 # INICIO DE LA APLICACIÓN
 # =========================================================
+@app.route('/api/download/<int:file_id>', methods=['GET'])
+def download_file(file_id):
+    connection = get_db()
+    try:
+        row = connection.execute("SELECT * FROM files WHERE id = ?", (file_id,)).fetchone()
+        if not row:
+            return "Archivo no encontrado", 404
+        
+        tg_file_id = row["file_id"]
+        file_name = row["name"]
+        
+        # Consultar la ruta real del archivo en los servidores de Telegram
+        token = BOT_TOKEN
+        import urllib.request
+        import json
+        
+        url_info = f"https://api.telegram.org/bot{token}/getFile?file_id={tg_file_id}"
+        req = urllib.request.urlopen(url_info)
+        res_data = json.loads(req.read().decode('utf-8'))
+        
+        if not res_data.get("ok"):
+            return "No se pudo recuperar el archivo de Telegram", 400
+            
+        file_path = res_data["result"]["file_path"]
+        download_url = f"https://api.telegram.org/file/bot{token}/{file_path}"
+        
+        # Redirigir directamente al enlace seguro de descarga de Telegram
+        return jsonify({"download_url": download_url})
+        
+    except Exception as e:
+        logger.error(f"Error en descarga: {e}")
+        return "Error interno al procesar la descarga", 500
+    finally:
+        connection.close()
 
 if __name__ == '__main__':
     init_db()
