@@ -1,1076 +1,479 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="theme-color" content="#0f172a">
-<title>ArchiveBot Pro</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-
-<style>
-:root {
-  --bg:#0f172a;
-  --card:#1e293b;
-  --hover:#273548;
-  --accent:#0088cc;
-  --text:#f8fafc;
-  --muted:#94a3b8;
-  --border:rgba(255,255,255,.09);
-  --success:#22c55e;
-  --danger:#f87171;
-}
-
-* {
-  box-sizing:border-box;
-  margin:0;
-  padding:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-}
-
-body {
-  background:var(--bg);
-  color:var(--text);
-  padding:16px;
-  min-height:100vh;
-}
-
-button,input { font:inherit; }
-button { cursor:pointer; }
-
-.app {
-  width:100%;
-  max-width:480px;
-  margin:auto;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-}
-
-.card {
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:15px;
-  padding:16px;
-}
-
-.header {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:12px;
-}
-
-.brand { font-size:18px;font-weight:800; }
-
-.badge {
-  background:#0088cc22;
-  color:#38bdf8;
-  border-radius:20px;
-  padding:5px 9px;
-  font-size:11px;
-  white-space:nowrap;
-}
-
-.status {
-  font-size:13px;
-  color:var(--muted);
-  line-height:1.5;
-  overflow-wrap:anywhere;
-}
-
-.status.ok { color:var(--success); }
-.status.error { color:var(--danger); }
-
-.stats {
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  margin-top:13px;
-  font-size:12px;
-  color:var(--muted);
-}
-
-.stats strong { color:var(--text); }
-
-.title {
-  font-size:15px;
-  font-weight:750;
-  margin-bottom:13px;
-}
-
-.grid {
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:9px;
-}
-
-.cat {
-  background:var(--bg);
-  color:var(--text);
-  border:1px solid var(--border);
-  border-radius:10px;
-  padding:13px 10px;
-  text-align:left;
-  font-size:13px;
-}
-
-.cat.active {
-  border-color:var(--accent);
-  background:#0088cc1c;
-}
-
-.cat-count {
-  color:#38bdf8;
-  font-weight:700;
-}
-
-.explorer {
-  display:none;
-  margin-top:15px;
-  border-top:1px solid var(--border);
-  padding-top:14px;
-}
-
-.explorer.show { display:block; }
-
-.explorer-head {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:8px;
-  margin-bottom:12px;
-}
-
-.explorer-title {
-  font-size:13px;
-  font-weight:700;
-  color:#38bdf8;
-}
-
-.small-btn {
-  border:0;
-  background:transparent;
-  color:var(--muted);
-  font-size:12px;
-  text-decoration:underline;
-  padding:4px;
-}
-
-.search {
-  width:100%;
-  background:var(--bg);
-  border:1px solid var(--border);
-  border-radius:9px;
-  padding:11px;
-  color:var(--text);
-  outline:none;
-  margin-bottom:10px;
-}
-
-.search:focus { border-color:var(--accent); }
-
-.file-list {
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  max-height:430px;
-  overflow:auto;
-}
-
-.file-item {
-  display:flex;
-  align-items:center;
-  gap:9px;
-  background:var(--bg);
-  padding:10px;
-  border:1px solid var(--border);
-  border-radius:9px;
-}
-
-.file-item input {
-  accent-color:var(--accent);
-  width:17px;
-  height:17px;
-  flex-shrink:0;
-}
-
-.file-info {
-  flex:1;
-  min-width:0;
-}
-
-.file-name {
-  font-size:12px;
-  font-weight:600;
-  overflow-wrap:anywhere;
-}
-
-.file-size {
-  font-size:11px;
-  color:var(--muted);
-  margin-top:4px;
-}
-
-.file-actions {
-  display:flex;
-  flex-direction:column;
-  gap:5px;
-}
-
-.detail-btn {
-  background:transparent;
-  border:1px solid var(--border);
-  color:var(--muted);
-  border-radius:7px;
-  padding:6px;
-  font-size:11px;
-  flex-shrink:0;
-}
-
-.open-btn {
-  background:#0088cc22;
-  border:1px solid #0088cc66;
-  color:#7dd3fc;
-  border-radius:7px;
-  padding:6px 8px;
-  font-size:11px;
-  flex-shrink:0;
-}
-
-.primary,.secondary {
-  width:100%;
-  border:0;
-  border-radius:11px;
-  padding:14px;
-  font-weight:750;
-  font-size:14px;
-}
-
-.primary { background:var(--accent);color:white; }
-.primary:disabled { opacity:.5;cursor:not-allowed; }
-
-.secondary {
-  background:var(--hover);
-  color:var(--text);
-  border:1px solid var(--border);
-  margin-top:8px;
-}
-
-.notice {
-  font-size:12px;
-  color:var(--muted);
-  line-height:1.5;
-  text-align:center;
-  overflow-wrap:anywhere;
-}
-
-.footer {
-  text-align:center;
-  color:#64748b;
-  font-size:10px;
-  padding:5px;
-}
-
-.overlay {
-  display:none;
-  position:fixed;
-  inset:0;
-  background:#000d;
-  z-index:10;
-  align-items:center;
-  justify-content:center;
-  padding:14px;
-}
-
-.overlay.show { display:flex; }
-
-.modal {
-  width:100%;
-  max-width:440px;
-  max-height:90vh;
-  overflow:auto;
-  background:var(--card);
-  border:1px solid var(--accent);
-  border-radius:15px;
-  padding:16px;
-}
-
-.modal h3 {
-  font-size:15px;
-  margin-bottom:12px;
-  overflow-wrap:anywhere;
-}
-
-.preview {
-  min-height:40px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  margin-bottom:12px;
-}
-
-.preview img,
-.preview video {
-  display:block;
-  max-width:100%;
-  max-height:52vh;
-  border-radius:10px;
-  object-fit:contain;
-}
-
-.preview audio { width:100%; }
-
-.preview iframe {
-  width:100%;
-  height:48vh;
-  background:white;
-  border:0;
-  border-radius:8px;
-}
-
-.preview-message {
-  color:var(--muted);
-  font-size:13px;
-  text-align:center;
-  line-height:1.6;
-  padding:15px 5px;
-}
-
-.detail {
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  padding:9px 0;
-  border-bottom:1px solid var(--border);
-  font-size:12px;
-}
-
-.detail span:first-child { color:var(--muted); }
-
-.detail span:last-child {
-  text-align:right;
-  overflow-wrap:anywhere;
-}
-
-.empty {
-  text-align:center;
-  color:var(--muted);
-  padding:18px 8px;
-  font-size:13px;
-  line-height:1.6;
-}
-</style>
-</head>
-
-<body>
-<div class="app">
-
-  <section class="card">
-    <div class="header">
-      <div class="brand">📦 ArchiveBot Pro</div>
-      <div class="badge">PLAN GRATUITO</div>
-    </div>
-
-    <div id="status" class="status">
-      Conectando con tu biblioteca...
-    </div>
-
-    <div class="stats">
-      <span>Archivos: <strong id="totalFound">0</strong></span>
-      <span>Tamaño: <strong id="totalWeight">0 MB</strong></span>
-    </div>
-  </section>
-
-  <section class="card">
-    <div class="title">📁 Tu biblioteca</div>
-
-    <div class="grid">
-      <button class="cat" data-cat="photos">
-        🖼️ Fotos <span class="cat-count" id="count-photos">0</span>
-      </button>
-
-      <button class="cat" data-cat="videos">
-        🎥 Vídeos <span class="cat-count" id="count-videos">0</span>
-      </button>
-
-      <button class="cat" data-cat="documents">
-        📄 Documentos <span class="cat-count" id="count-documents">0</span>
-      </button>
-
-      <button class="cat" data-cat="audios">
-        🎵 Audios <span class="cat-count" id="count-audios">0</span>
-      </button>
-    </div>
-
-    <div id="explorer" class="explorer">
-      <div class="explorer-head">
-        <div id="explorerTitle" class="explorer-title">Archivos</div>
-        <div>
-          <button class="small-btn" id="selectAll">Marcar todos</button>
-          <button class="small-btn" id="deselectAll">Ninguno</button>
-        </div>
-      </div>
-
-      <input
-        id="search"
-        class="search"
-        type="search"
-        placeholder="🔍 Buscar archivo..."
-      >
-
-      <div id="fileList" class="file-list"></div>
-    </div>
-  </section>
-
-  <button id="downloadZip" class="primary">
-    📦 Descargar ZIP (
-    <span id="selectedCount">0</span> ·
-    <span id="selectedSize">0 MB</span>
+import os
+import io
+import hmac
+import hashlib
+import json
+import sqlite3
+import logging
+import threading
+import time
+import zipfile
+
+from datetime import datetime, timezone
+from urllib.parse import parse_qsl
+from functools import wraps
+
+from flask import Flask, jsonify, request, send_file
+from flask_cors import CORS
+import telebot
+
+
+# =========================================================
+# CONFIGURACIÓN
+# =========================================================
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("archivebot")
+
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+
+DATABASE_PATH = os.environ.get(
+    "DATABASE_PATH",
+    "archivebot.db"
+)
+
+PORT = int(os.environ.get("PORT", "10000"))
+
+MAX_FILES_PER_ZIP = 50
+MAX_INIT_DATA_AGE = 86400
+
+app = Flask(__name__)
+
+CORS(
+    app,
+    resources={
+        r"/api/*": {
+            "origins": [
+                "https://continodidie.github.io",
+                "http://localhost:8000",
+                "http://127.0.0.1:8000"
+            ]
+        }
+    },
+    allow_headers=[
+        "Content-Type",
+        "X-Telegram-Init-Data"
+    ],
+    methods=["GET", "POST", "OPTIONS"]
+)
+
+api_bot = None
+bot_lock = threading.Lock()
+
+
+# =========================================================
+# BASE DE DATOS
+# =========================================================
+
+def get_db():
+    connection = sqlite3.connect(
+        DATABASE_PATH,
+        timeout=30
     )
-  </button>
 
-  <button id="refresh" class="secondary">
-    🔄 Actualizar biblioteca
-  </button>
+    connection.row_factory = sqlite3.Row
+    return connection
 
-  <div id="notice" class="notice">
-    Abre esta aplicación desde el menú de tu bot de Telegram.
-  </div>
 
-  <div class="footer">
-    ARCHIVEBOT PRO · TU BIBLIOTECA PERSONAL
-  </div>
+def init_db():
+    connection = get_db()
 
-</div>
-
-<div id="overlay" class="overlay">
-  <div class="modal">
-    <h3 id="modalName">Archivo</h3>
-
-    <div id="preview" class="preview"></div>
-
-    <div class="detail">
-      <span>Categoría</span>
-      <span id="modalCat">—</span>
-    </div>
-
-    <div class="detail">
-      <span>Tamaño</span>
-      <span id="modalSize">—</span>
-    </div>
-
-    <div class="detail">
-      <span>Tipo</span>
-      <span id="modalMime">—</span>
-    </div>
-
-    <div class="detail">
-      <span>Fecha</span>
-      <span id="modalDate">—</span>
-    </div>
-
-    <button id="downloadFile" class="primary">
-      📥 Descargar archivo
-    </button>
-
-    <button id="closeModal" class="secondary">
-      Cerrar
-    </button>
-  </div>
-</div>
-
-<script>
-(() => {
-  "use strict";
-
-  const API = "https://archivebot-pro.onrender.com";
-
-  const CATEGORIES = [
-    "photos",
-    "videos",
-    "documents",
-    "audios"
-  ];
-
-  const LABELS = {
-    photos: "Fotos",
-    videos: "Vídeos",
-    documents: "Documentos",
-    audios: "Audios"
-  };
-
-  const tg = window.Telegram?.WebApp || null;
-
-  if (tg) {
-    tg.ready();
-    tg.expand();
-  }
-
-  let initData = tg?.initData || "";
-  let filesData = {
-    photos: [],
-    videos: [],
-    documents: [],
-    audios: []
-  };
-
-  let activeCategory = null;
-  let currentFile = null;
-  let previewURL = null;
-
-  const selected = new Map();
-
-  const $ = id => document.getElementById(id);
-
-  function setStatus(message, type = "") {
-    $("status").textContent = message;
-    $("status").className = "status " + type;
-  }
-
-  function authHeaders(extra = {}) {
-    return {
-      ...extra,
-      "X-Telegram-Init-Data": initData
-    };
-  }
-
-  async function fetchJSON(url, options = {}) {
-    const response = await fetch(url, {
-      cache: "no-store",
-      ...options,
-      headers: authHeaders(options.headers || {})
-    });
-
-    const type = response.headers.get("content-type") || "";
-    const text = await response.text();
-
-    let data;
-
-    if (type.includes("application/json")) {
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error("El servidor devolvió JSON inválido.");
-      }
-    } else {
-      throw new Error(
-        "El servidor no devolvió JSON. HTTP " + response.status
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data.error || "Error HTTP " + response.status
-      );
-    }
-
-    return data;
-  }
-
-  async function loadFiles() {
-    initData = tg?.initData || "";
-
-    if (!initData) {
-      setStatus(
-        "⚠️ Abre la Mini App desde Telegram.",
-        "error"
-      );
-
-      $("notice").textContent =
-        "La aplicación debe abrirse desde el menú del bot, dentro de Telegram.";
-
-      return;
-    }
-
-    setStatus("🔄 Cargando biblioteca...");
-
-    try {
-      const data = await fetchJSON(
-        API + "/api/files?t=" + Date.now()
-      );
-
-      for (const cat of CATEGORIES) {
-        filesData[cat] = Array.isArray(data[cat])
-          ? data[cat]
-          : [];
-      }
-
-      const validIds = new Set(
-        CATEGORIES.flatMap(cat =>
-          filesData[cat].map(file => String(file.id))
+    connection.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            file_id TEXT NOT NULL,
+            file_unique_id TEXT,
+            name TEXT NOT NULL,
+            size INTEGER DEFAULT 0,
+            mime_type TEXT DEFAULT '',
+            category TEXT DEFAULT 'documento',
+            created_at TEXT NOT NULL
         )
-      );
+    """)
+
+    connection.execute("""
+        CREATE INDEX IF NOT EXISTS idx_files_user
+        ON files(user_id)
+    """)
+
+    connection.commit()
+    connection.close()
+
+    logger.info("Base de datos inicializada.")
+
+
+def save_file(
+    user_id,
+    file_id,
+    file_unique_id,
+    name,
+    size,
+    mime_type,
+    category
+):
+    connection = get_db()
+
+    existing = connection.execute(
+        """
+        SELECT id
+        FROM files
+        WHERE user_id = ?
+        AND file_unique_id = ?
+        """,
+        (user_id, file_unique_id)
+    ).fetchone()
+
+    if existing:
+        connection.execute(
+            """
+            UPDATE files
+            SET file_id = ?,
+                name = ?,
+                size = ?,
+                mime_type = ?,
+                category = ?
+            WHERE id = ?
+            """,
+            (
+                file_id,
+                name,
+                size or 0,
+                mime_type or "",
+                category,
+                existing["id"]
+            )
+        )
+    else:
+        connection.execute(
+            """
+            INSERT INTO files (
+                user_id,
+                file_id,
+                file_unique_id,
+                name,
+                size,
+                mime_type,
+                category,
+                created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                file_id,
+                file_unique_id,
+                name,
+                size or 0,
+                mime_type or "",
+                category,
+                datetime.now(timezone.utc).isoformat()
+            )
+        )
+
+    connection.commit()
+    connection.close()
+
+
+def get_user_files(user_id):
+    connection = get_db()
+
+    rows = connection.execute(
+        """
+        SELECT
+            id,
+            name,
+            size,
+            mime_type,
+            category,
+            created_at
+        FROM files
+        WHERE user_id = ?
+        ORDER BY id DESC
+        """,
+        (user_id,)
+    ).fetchall()
 
-      for (const id of selected.keys()) {
-        if (!validIds.has(String(id))) {
-          selected.delete(id);
-        }
-      }
+    connection.close()
 
-      updateUI();
-      setStatus("✅ Biblioteca sincronizada.", "ok");
+    return [dict(row) for row in rows]
 
-      $("notice").textContent =
-        "Tus archivos están listos para abrir o descargar.";
 
-    } catch (error) {
-      console.error(error);
-      setStatus("⚠️ " + error.message, "error");
-    }
-  }
+def get_file_record(file_id, user_id):
+    connection = get_db()
 
-  function updateUI() {
-    let total = 0;
-    let weight = 0;
+    row = connection.execute(
+        """
+        SELECT *
+        FROM files
+        WHERE id = ?
+        AND user_id = ?
+        """,
+        (file_id, user_id)
+    ).fetchone()
 
-    for (const cat of CATEGORIES) {
-      $("count-" + cat).textContent =
-        filesData[cat].length;
+    connection.close()
 
-      total += filesData[cat].length;
-
-      for (const file of filesData[cat]) {
-        weight += Number(file.size || 0);
-      }
-    }
-
-    $("totalFound").textContent = total;
-    $("totalWeight").textContent =
-      weight.toFixed(2) + " MB";
-
-    updateSelection();
+    return dict(row) if row else None
 
-    if (activeCategory) {
-      renderFiles();
-    }
-  }
-
-  function updateSelection() {
-    let size = 0;
 
-    selected.forEach(file => {
-      size += Number(file.size || 0);
-    });
+# =========================================================
+# VALIDACIÓN SEGURA DE TELEGRAM MINI APP
+# =========================================================
 
-    $("selectedCount").textContent = selected.size;
+def validate_telegram_init_data(init_data):
+    if not BOT_TOKEN or not init_data:
+        return None
 
-    $("selectedSize").textContent =
-      size.toFixed(2) + " MB";
+    try:
+        parsed_data = dict(parse_qsl(
+            init_data,
+            keep_blank_values=True
+        ))
 
-    $("downloadZip").disabled =
-      selected.size === 0;
-  }
+        received_hash = parsed_data.pop("hash", None)
 
-  document.querySelectorAll(".cat").forEach(button => {
-    button.addEventListener("click", () => {
-      const category = button.dataset.cat;
+        if not received_hash:
+            return None
 
-      if (activeCategory === category) {
-        activeCategory = null;
-        $("explorer").classList.remove("show");
-        button.classList.remove("active");
-        return;
-      }
+        auth_date = int(parsed_data.get("auth_date", "0"))
 
-      document.querySelectorAll(".cat").forEach(item => {
-        item.classList.remove("active");
-      });
+        current_time = int(time.time())
 
-      button.classList.add("active");
+        if auth_date <= 0:
+            return None
 
-      activeCategory = category;
+        if current_time - auth_date > MAX_INIT_DATA_AGE:
+            return None
 
-      $("explorerTitle").textContent =
-        LABELS[category];
+        if auth_date - current_time > 60:
+            return None
 
-      $("search").value = "";
-      $("explorer").classList.add("show");
+        data_check_string = "\n".join(
+            f"{key}={value}"
+            for key, value in sorted(parsed_data.items())
+        )
 
-      renderFiles();
-    });
-  });
+        secret_key = hmac.new(
+            b"WebAppData",
+            BOT_TOKEN.encode("utf-8"),
+            hashlib.sha256
+        ).digest()
 
-  function renderFiles() {
-    const container = $("fileList");
-    container.replaceChildren();
+        calculated_hash = hmac.new(
+            secret_key,
+            data_check_string.encode("utf-8"),
+            hashlib.sha256
+        ).hexdigest()
 
-    const query = $("search").value
-      .trim()
-      .toLowerCase();
+        if not hmac.compare_digest(
+            calculated_hash,
+            received_hash
+        ):
+            return None
 
-    const files = (filesData[activeCategory] || [])
-      .filter(file =>
-        String(file.name || "")
-          .toLowerCase()
-          .includes(query)
-      );
-
-    if (!files.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty";
-      empty.textContent =
-        "No hay archivos en esta categoría.";
-
-      container.appendChild(empty);
-      return;
-    }
-
-    for (const file of files) {
-      const id = String(file.id);
-
-      const row = document.createElement("div");
-      row.className = "file-item";
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.checked = selected.has(id);
-      checkbox.setAttribute(
-        "aria-label",
-        "Seleccionar " + file.name
-      );
-
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          selected.set(id, file);
-        } else {
-          selected.delete(id);
-        }
-
-        updateSelection();
-      });
+        user_json = parsed_data.get("user")
 
-      const info = document.createElement("div");
-      info.className = "file-info";
+        if not user_json:
+            return None
 
-      const name = document.createElement("div");
-      name.className = "file-name";
-      name.textContent = file.name || "Archivo";
+        user_data = json.loads(user_json)
+        user_id = user_data.get("id")
 
-      const size = document.createElement("div");
-      size.className = "file-size";
+        if not user_id:
+            return None
 
-      size.textContent =
-        Number(file.size || 0).toFixed(2) + " MB";
+        return int(user_id)
 
-      info.append(name, size);
+    except Exception as error:
+        logger.warning(
+            "No se pudo validar Telegram initData: %s",
+            error
+        )
+        return None
 
-      const actions = document.createElement("div");
-      actions.className = "file-actions";
 
-      const open = document.createElement("button");
-      open.className = "open-btn";
-      open.textContent = "Abrir";
+def require_telegram_user(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        init_data = request.headers.get(
+            "X-Telegram-Init-Data",
+            ""
+        )
 
-      open.addEventListener("click", () => {
-        openFile(file, activeCategory);
-      });
+        user_id = validate_telegram_init_data(init_data)
 
-      const details = document.createElement("button");
-      details.className = "detail-btn";
-      details.textContent = "Info";
+        if not user_id:
+            return jsonify({
+                "ok": False,
+                "error": "Sesión de Telegram inválida o caducada."
+            }), 401
 
-      details.addEventListener("click", () => {
-        showDetails(file, activeCategory);
-      });
-
-      actions.append(open, details);
-      row.append(checkbox, info, actions);
+        request.telegram_user_id = user_id
 
-      container.appendChild(row);
-    }
-  }
-
-  async function fetchFileBlob(file, download = false) {
-    const url =
-      API + "/api/file/" +
-      encodeURIComponent(file.id) +
-      (download ? "?download=1" : "");
-
-    const response = await fetch(url, {
-      cache: "no-store",
-      headers: authHeaders()
-    });
-
-    if (!response.ok) {
-      let message = "No se pudo recuperar el archivo.";
-
-      try {
-        const data = await response.json();
-        message = data.error || message;
-      } catch {}
-
-      throw new Error(message);
-    }
-
-    return await response.blob();
-  }
-
-  function clearPreview() {
-    if (previewURL) {
-      URL.revokeObjectURL(previewURL);
-      previewURL = null;
-    }
-
-    $("preview").replaceChildren();
-  }
-
-  function showPreviewMessage(message) {
-    const box = document.createElement("div");
-    box.className = "preview-message";
-    box.textContent = message;
-
-    $("preview").appendChild(box);
-  }
-
-  async function openFile(file, category) {
-    currentFile = file;
-
-    $("modalName").textContent = file.name || "Archivo";
-    $("modalCat").textContent = LABELS[category] || category;
-    $("modalSize").textContent =
-      Number(file.size || 0).toFixed(2) + " MB";
-
-    $("modalMime").textContent =
-      file.mime || "Tipo desconocido";
-
-    $("modalDate").textContent =
-      file.date || "—";
-
-    $("overlay").classList.add("show");
-
-    clearPreview();
-    showPreviewMessage("Recuperando archivo original...");
-
-    try {
-      const blob = await fetchFileBlob(file, false);
-
-      clearPreview();
-
-      previewURL = URL.createObjectURL(blob);
-
-      const mime = (
-        file.mime ||
-        blob.type ||
-        "application/octet-stream"
-      ).toLowerCase();
-
-      let element;
-
-      if (mime.startsWith("image/")) {
-        element = document.createElement("img");
-        element.alt = file.name || "Vista previa";
-        element.src = previewURL;
-
-      } else if (mime.startsWith("video/")) {
-        element = document.createElement("video");
-        element.src = previewURL;
-        element.controls = true;
-        element.playsInline = true;
-        element.preload = "metadata";
-
-      } else if (mime.startsWith("audio/")) {
-        element = document.createElement("audio");
-        element.src = previewURL;
-        element.controls = true;
-        element.preload = "metadata";
-
-      } else if (
-        mime === "application/pdf" ||
-        String(file.name || "")
-          .toLowerCase()
-          .endsWith(".pdf")
-      ) {
-        element = document.createElement("iframe");
-        element.src = previewURL;
-        element.title = "Vista previa del PDF";
-
-      } else {
-        showPreviewMessage(
-          "Este formato no tiene vista previa integrada. " +
-          "Pulsa «Descargar archivo» para abrirlo con una aplicación compatible."
-        );
-        return;
-      }
-
-      $("preview").appendChild(element);
-
-    } catch (error) {
-      clearPreview();
-      showPreviewMessage(error.message);
-    }
-  }
-
-  function showDetails(file, category) {
-    openFile(file, category);
-  }
-
-  async function downloadCurrentFile() {
-    if (!currentFile) return;
-
-    const button = $("downloadFile");
-    button.disabled = true;
-    button.textContent = "Preparando descarga...";
-
-    try {
-      const blob = await fetchFileBlob(
-        currentFile,
-        true
-      );
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = currentFile.name || "archivo";
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
-
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      button.disabled = false;
-      button.textContent = "📥 Descargar archivo";
-    }
-  }
-
-  $("downloadFile").addEventListener(
-    "click",
-    downloadCurrentFile
-  );
-
-  function closeModal() {
-    $("overlay").classList.remove("show");
-    clearPreview();
-    currentFile = null;
-  }
-
-  $("closeModal").addEventListener(
-    "click",
-    closeModal
-  );
-
-  $("overlay").addEventListener("click", event => {
-    if (event.target === $("overlay")) {
-      closeModal();
-    }
-  });
-
-  $("search").addEventListener(
-    "input",
-    renderFiles
-  );
-
-  $("refresh").addEventListener(
-    "click",
-    loadFiles
-  );
-
-  $("selectAll").addEventListener("click", () => {
-    if (!activeCategory) return;
-
-    for (const file of filesData[activeCategory]) {
-      selected.set(String(file.id), file);
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+# =========================================================
+# BOT DE TELEGRAM
+# =========================================================
+
+def get_bot():
+    global api_bot
+
+    with bot_lock:
+        if api_bot is None:
+            if not BOT_TOKEN:
+                raise RuntimeError(
+                    "Falta la variable TELEGRAM_BOT_TOKEN."
+                )
+
+            api_bot = telebot.TeleBot(
+                BOT_TOKEN,
+                threaded=True
+            )
+
+        return api_bot
+
+
+def get_message_file(message):
+    file_id = None
+    file_unique_id = None
+    name = None
+    size = 0
+    mime_type = ""
+    category = "documento"
+
+    if message.document:
+        item = message.document
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = item.file_name or f"documento_{item.file_unique_id}"
+        size = item.file_size or 0
+        mime_type = item.mime_type or ""
+        category = "documento"
+
+    elif message.photo:
+        item = message.photo[-1]
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = f"foto_{item.file_unique_id}.jpg"
+        size = item.file_size or 0
+        mime_type = "image/jpeg"
+        category = "imagen"
+
+    elif message.video:
+        item = message.video
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = item.file_name or f"video_{item.file_unique_id}.mp4"
+        size = item.file_size or 0
+        mime_type = item.mime_type or "video/mp4"
+        category = "video"
+
+    elif message.animation:
+        item = message.animation
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = item.file_name or f"animacion_{item.file_unique_id}.mp4"
+        size = item.file_size or 0
+        mime_type = item.mime_type or "video/mp4"
+        category = "video"
+
+    elif message.audio:
+        item = message.audio
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = item.file_name or f"audio_{item.file_unique_id}"
+        size = item.file_size or 0
+        mime_type = item.mime_type or "audio/mpeg"
+        category = "audio"
+
+    elif message.voice:
+        item = message.voice
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = f"nota_voz_{item.file_unique_id}.ogg"
+        size = item.file_size or 0
+        mime_type = item.mime_type or "audio/ogg"
+        category = "audio"
+
+    elif message.video_note:
+        item = message.video_note
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = f"nota_video_{item.file_unique_id}.mp4"
+        size = item.file_size or 0
+        mime_type = "video/mp4"
+        category = "video"
+
+    elif message.sticker:
+        item = message.sticker
+
+        file_id = item.file_id
+        file_unique_id = item.file_unique_id
+        name = f"sticker_{item.file_unique_id}.webp"
+        size = item.file_size or 0
+        mime_type = "image/webp"
+        category = "imagen"
+
+    if not file_id:
+        return None
+
+    return {
+        "file_id": file_id,
+        "file_unique_id": file_unique_id,
+        "name": name,
+        "size": size,
+        "mime_type": mime_type,
+        "category": category
     }
 
-    renderFiles();
-    updateSelection();
-  });
 
-  $("deselectAll").addEventListener("click", () => {
-    if (!activeCategory) return;
+def register_bot_handlers(bot):
+    @bot.message_handler(
+        content_types=[
+            "document",
+            "photo",
+            "video",
+            "animation",
+            "audio",
+            "voice",
+            "video_note",
+            "sticker"
+        ]
+    )
+    def handle_file(message):
+        try:
+            if message.chat.type != "private":
+                return
 
-    for (const file of filesData[activeCategory]) {
-      selected.delete(String(file.id));
-    }
+            file_data = get_message_file(message)
 
-    renderFiles();
-    updateSelection();
-  });
+            if not file_data:
+                bot.reply_to(
+                    message,
+                    "No pude identificar ese archivo. Intenta enviarlo de nuevo."
+                )
+                return
 
-  $("downloadZip").addEventListener(
-    "click",
-    async () => {
-      if (!initData) {
-        setStatus(
-          "Abre la aplicación desde Telegram.",
-          "error"
-        );
-        return;
-      }
+            save_file(
+                user_id=message.from_user.id,
+                file_id=file_data["file_id"],
+                file_unique_id=file_data["file_unique_id"],
+                name=file_data["name"],
+                size=file_data["size"],
+                mime_type=file_data["mime_type"],
+                category=file_data["category"]
+            )
 
-      if (!selected.size) return;
-
-      const button = $("downloadZip");
-
-      button.disabled = true;
-      button.textContent = "Preparando ZIP...";
-
-      try {
-        const response = await fetch(
-          API + "/api/zip",
-          {
-            method: "POST",
-            cache: "no-store",
-            headers: authHeaders({
-              "Content-Type": "application/json"
-            }),
-            body: JSON.stringify({
-              ids: Array.from(selected.values())
-                .map(file => file.id)
-            })
-          }
-        );
-
-        if (!response.ok) {
-          let message = "No se pudo crear el ZIP.";
-
-          try {
-            const data = await response.json();
-            message = data.error || message;
-          } catch {}
-
-          throw new Error(message);
-        }
-
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = "ArchiveBot_Pro.zip";
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        setTimeout(() => URL.revokeObjectURL(url), 60000);
-
-        setStatus("✅ ZIP preparado.", "ok");
-
-      } catch (error) {
-        console.error(error);
-        setStatus("⚠️ " + error.message, "error");
-
-      } finally {
-        button.textContent =
-          "📦 Descargar ZIP (" +
-          selected.size + " · " +
-          $("selectedSize").textContent + ")";
-
-        button.disabled = selected.size === 0;
-      }
-    }
-  );
-
-  updateSelection();
-  loadFiles();
-})();
-</script>
-
-</body>
-</html>
+           
