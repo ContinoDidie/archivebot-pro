@@ -1,316 +1,479 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArchiveBot Pro</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg-color: #0f172a;
-      --card-bg: #1e293b;
-      --card-hover: #273548;
-      --accent-color: #0088cc;
-      --accent-hover: #0077b5;
-      --text-main: #f8fafc;
-      --text-secondary: #94a3b8;
-      --border-color: rgba(255, 255, 255, 0.08);
-      --success-color: #22c55e;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>ArchiveBot Pro</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-color); color: var(--text-main); padding: 16px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-    .app-container { width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 16px; }
-
-    .status-card, .section-card, .limit-card { background: var(--card-bg); border-radius: 14px; padding: 16px; border: 1px solid var(--border-color); }
-    .status-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-    .bot-title { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-    .plan-badge { background: rgba(0, 136, 204, 0.15); color: var(--accent-color); font-size: 0.75rem; padding: 3px 8px; border-radius: 20px; font-weight: 600; }
-    .status-text { font-size: 0.9rem; color: var(--success-color); margin-bottom: 8px; font-weight: 500; }
-    .progress-bar-bg { background: #0f172a; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px; }
-    .progress-bar-fill { background: var(--accent-color); height: 100%; width: 100%; border-radius: 4px; }
-    .status-details { display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-secondary); }
-
-    .section-title { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; color: var(--text-main); }
-    .categories-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .category-btn { background: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 12px; border-radius: 10px; font-size: 0.85rem; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: all 0.2s ease; text-align: left; }
-    .category-btn:hover { background: var(--card-hover); border-color: var(--accent-color); }
-    .category-btn.active { border-color: var(--accent-color); background: rgba(0, 136, 204, 0.1); }
-
-    .file-explorer { display: none; margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 14px; }
-    .file-explorer.visible { display: block; animation: fadeIn 0.3s ease; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-    .explorer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .explorer-title { font-size: 0.85rem; font-weight: 600; color: var(--accent-color); }
-    .action-link { background: none; border: none; color: var(--text-secondary); font-size: 0.75rem; cursor: pointer; text-decoration: underline; }
-
-    .search-box { position: relative; margin-bottom: 10px; }
-    .search-input { width: 100%; background: #0f172a; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 10px 8px 32px; color: var(--text-main); font-size: 0.85rem; outline: none; }
-    .search-input:focus { border-color: var(--accent-color); }
-    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 0.85rem; color: var(--text-secondary); }
-
-    .file-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
-    .file-item { display: flex; align-items: center; background: #0f172a; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border-color); cursor: pointer; }
-    .file-item:hover { background: var(--card-hover); }
-    .file-checkbox { margin-right: 10px; accent-color: var(--accent-color); width: 16px; height: 16px; cursor: pointer; }
-    .file-info { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; }
-    .file-name { font-size: 0.8rem; font-weight: 500; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .file-size { font-size: 0.7rem; color: var(--text-secondary); }
-
-    .btn-download { background: var(--accent-color); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-weight: 600; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 4px; box-shadow: 0 4px 12px rgba(0, 136, 204, 0.3); }
-    .btn-refresh { background: var(--card-hover); border: 1px solid var(--border-color); color: var(--text-main); width: 100%; padding: 10px; border-radius: 12px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; }
-
-    /* Modal Emergente */
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(4px); z-index: 999; justify-content: center; align-items: center; padding: 16px; }
-    .modal-overlay.active { display: flex; animation: fadeIn 0.2s ease; }
-    .modal-card { background: var(--card-bg); border: 1px solid var(--accent-color); border-radius: 16px; width: 100%; max-width: 360px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 12px; }
-    .modal-title { font-size: 1rem; font-weight: 700; color: var(--accent-color); word-break: break-all; }
-    .modal-detail { font-size: 0.82rem; color: var(--text-secondary); display: flex; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
-    .modal-detail span { color: var(--text-main); font-weight: 500; }
-    .btn-close-modal { background: var(--card-hover); color: var(--text-main); border: 1px solid var(--border-color); padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 6px; }
-  </style>
+<style>
+:root {
+  --bg:#0f172a;
+  --card:#1e293b;
+  --hover:#273548;
+  --accent:#0088cc;
+  --text:#f8fafc;
+  --muted:#94a3b8;
+  --border:rgba(255,255,255,.09);
+  --success:#22c55e;
+  --danger:#f87171;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:var(--text);padding:16px;min-height:100vh}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{width:100%;max-width:480px;margin:auto;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:16px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.brand{font-size:18px;font-weight:800}
+.badge{background:#0088cc22;color:#38bdf8;border-radius:20px;padding:5px 9px;font-size:11px;white-space:nowrap}
+.status{font-size:13px;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.status.ok{color:var(--success)}
+.status.error{color:var(--danger)}
+.stats{display:flex;justify-content:space-between;gap:10px;margin-top:13px;font-size:12px;color:var(--muted)}
+.stats strong{color:var(--text)}
+.title{font-size:15px;font-weight:750;margin-bottom:13px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.cat{background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:13px 10px;text-align:left;font-size:13px}
+.cat.active{border-color:var(--accent);background:#0088cc1c}
+.cat-count{color:#38bdf8;font-weight:700}
+.explorer{display:none;margin-top:15px;border-top:1px solid var(--border);padding-top:14px}
+.explorer.show{display:block}
+.explorer-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+.explorer-title{font-size:13px;font-weight:700;color:#38bdf8}
+.small-btn{border:0;background:transparent;color:var(--muted);font-size:12px;text-decoration:underline;padding:4px}
+.search{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:11px;color:var(--text);outline:none;margin-bottom:10px}
+.search:focus{border-color:var(--accent)}
+.file-list{display:flex;flex-direction:column;gap:7px;max-height:310px;overflow:auto}
+.file-item{display:flex;align-items:center;gap:10px;background:var(--bg);padding:11px;border:1px solid var(--border);border-radius:9px}
+.file-item input{accent-color:var(--accent);width:17px;height:17px;flex-shrink:0}
+.file-info{flex:1;min-width:0}
+.file-name{font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.file-size{font-size:11px;color:var(--muted);margin-top:4px}
+.detail-btn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:6px;font-size:11px;flex-shrink:0}
+.primary,.secondary{width:100%;border:0;border-radius:11px;padding:14px;font-weight:750;font-size:14px}
+.primary{background:var(--accent);color:white}
+.primary:disabled{opacity:.5;cursor:not-allowed}
+.secondary{background:var(--hover);color:var(--text);border:1px solid var(--border);margin-top:8px}
+.notice{font-size:12px;color:var(--muted);line-height:1.5;text-align:center;overflow-wrap:anywhere}
+.overlay{display:none;position:fixed;inset:0;background:#000b;z-index:10;align-items:center;justify-content:center;padding:18px}
+.overlay.show{display:flex}
+.modal{width:100%;max-width:360px;background:var(--card);border:1px solid var(--accent);border-radius:15px;padding:18px}
+.modal h3{font-size:15px;margin-bottom:15px;overflow-wrap:anywhere}
+.detail{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:12px}
+.detail span:first-child{color:var(--muted)}
+.detail span:last-child{text-align:right;overflow-wrap:anywhere}
+.empty{text-align:center;color:var(--muted);padding:18px 8px;font-size:13px;line-height:1.6}
+.footer{text-align:center;color:#64748b;font-size:10px;padding:5px}
+</style>
 </head>
+
 <body>
+<div class="app">
 
-  <div class="app-container">
-    
-    <div class="status-card">
-      <div class="status-header">
-        <div class="bot-title">📦 ArchiveBot Pro</div>
-        <span class="plan-badge">PLAN GRATUITO</span>
-      </div>
-      <div class="status-text" id="statusMessage">✅ Sincronizado con Telegram</div>
-      <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
-      <div class="status-details">
-        <span>Archivos encontrados: <strong id="totalFound">0</strong></span>
-        <span>Tamaño total: <strong id="totalWeight">0.0 MB</strong></span>
-      </div>
+  <section class="card">
+    <div class="header">
+      <div class="brand">📦 ArchiveBot Pro</div>
+      <div class="badge">PLAN GRATUITO</div>
+    </div>
+    <div id="status" class="status">Conectando con tu biblioteca...</div>
+    <div class="stats">
+      <span>Archivos: <strong id="totalFound">0</strong></span>
+      <span>Tamaño: <strong id="totalWeight">0 MB</strong></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="title">📁 Tu biblioteca</div>
+
+    <div class="grid">
+      <button class="cat" data-cat="photos">🖼️ Fotos <span class="cat-count" id="count-photos">0</span></button>
+      <button class="cat" data-cat="videos">🎥 Vídeos <span class="cat-count" id="count-videos">0</span></button>
+      <button class="cat" data-cat="documents">📄 Documentos <span class="cat-count" id="count-documents">0</span></button>
+      <button class="cat" data-cat="audios">🎵 Audios <span class="cat-count" id="count-audios">0</span></button>
     </div>
 
-    <div class="section-card">
-      <div class="section-title">📁 Tu biblioteca</div>
-      
-      <div class="categories-grid">
-        <button class="category-btn" data-category="photos"><span>🖼️</span> Fotos (<span id="count-photos">0</span>)</button>
-        <button class="category-btn" data-category="videos"><span>🎥</span> Vídeos (<span id="count-videos">0</span>)</button>
-        <button class="category-btn" data-category="documents"><span>📄</span> Documentos (<span id="count-documents">0</span>)</button>
-        <button class="category-btn" data-category="audios"><span>🎵</span> Audios (<span id="count-audios">0</span>)</button>
-      </div>
-
-      <div id="fileExplorer" class="file-explorer">
-        <div class="explorer-header">
-          <span class="explorer-title" id="explorerCategoryTitle">Archivos de la categoría</span>
-          <div class="explorer-actions">
-            <button class="action-link" id="selectAllCategory">Marcar todos</button>
-            <button class="action-link" id="deselectAllCategory">Ninguno</button>
-          </div>
+    <div id="explorer" class="explorer">
+      <div class="explorer-head">
+        <div id="explorerTitle" class="explorer-title">Archivos</div>
+        <div>
+          <button class="small-btn" id="selectAll">Marcar todos</button>
+          <button class="small-btn" id="deselectAll">Ninguno</button>
         </div>
-
-        <div class="search-box">
-          <span class="search-icon">🔍</span>
-          <input type="text" id="fileSearchInput" class="search-input" placeholder="Buscar archivo...">
-        </div>
-
-        <div id="fileListContainer" class="file-list"></div>
       </div>
+      <input id="search" class="search" type="search" placeholder="🔍 Buscar archivo...">
+      <div id="fileList" class="file-list"></div>
     </div>
+  </section>
 
-    <button id="btnDownloadZip" class="btn-download">
-      📥 Descargar ZIP (<span id="selectedCount">0</span> ítems • <span id="selectedSize">0.0</span> MB)
-    </button>
+  <button id="downloadZip" class="primary">📥 Descargar ZIP (<span id="selectedCount">0</span> · <span id="selectedSize">0 MB</span>)</button>
+  <button id="refresh" class="secondary">🔄 Actualizar biblioteca</button>
+  <div id="notice" class="notice">Abre esta aplicación desde el menú de tu bot de Telegram.</div>
+  <div class="footer">ARCHIVEBOT PRO · TU BIBLIOTECA PERSONAL</div>
 
-    <button id="btnRefresh" class="btn-refresh">
-      🔄 Actualizar biblioteca
-    </button>
+</div>
 
+<div id="overlay" class="overlay">
+  <div class="modal">
+    <h3 id="modalName">Detalles del archivo</h3>
+    <div class="detail"><span>ID</span><span id="modalId">—</span></div>
+    <div class="detail"><span>Categoría</span><span id="modalCat">—</span></div>
+    <div class="detail"><span>Tamaño</span><span id="modalSize">—</span></div>
+    <div class="detail"><span>Tipo</span><span id="modalMime">—</span></div>
+    <div class="detail"><span>Fecha</span><span id="modalDate">—</span></div>
+    <button id="closeModal" class="secondary">Cerrar</button>
   </div>
+</div>
 
-  <!-- Modal Emergente de Detalles -->
-  <div id="fileModal" class="modal-overlay">
-    <div class="modal-card">
-      <div id="modalFileName" class="modal-title">Nombre_Archivo.jpg</div>
-      <div class="modal-detail">ID: <span id="modalFileId">--</span></div>
-      <div class="modal-detail">Categoría: <span id="modalFileCategory">--</span></div>
-      <div class="modal-detail">Tamaño: <span id="modalFileSize">-- MB</span></div>
-      <div class="modal-detail">Tipo MIME: <span id="modalFileMime">--</span></div>
-      <div class="modal-detail">Fecha: <span id="modalFileDate">--</span></div>
-      <button class="btn-close-modal" id="btnCloseModal">Cerrar Detalle</button>
-    </div>
-  </div>
+<script>
+(() => {
+  "use strict";
 
-  <script>
-    let filesData = { photos: [], videos: [], documents: [], audios: [] };
-    let activeCategory = null;
-    let selectedFilesMap = new Map();
+  // Backend real: no utilizar rutas relativas de GitHub Pages.
+  const API = "https://archivebot-pro.onrender.com";
+  const CATEGORIES = ["photos", "videos", "documents", "audios"];
+  const LABELS = {
+    photos: "Fotos",
+    videos: "Vídeos",
+    documents: "Documentos",
+    audios: "Audios"
+  };
 
-    const categoryButtons = document.querySelectorAll('.category-btn');
-    const fileExplorer = document.getElementById('fileExplorer');
-    const explorerCategoryTitle = document.getElementById('explorerCategoryTitle');
-    const fileListContainer = document.getElementById('fileListContainer');
-    const fileSearchInput = document.getElementById('fileSearchInput');
-    const btnRefresh = document.getElementById('btnRefresh');
-    
-    const fileModal = document.getElementById('fileModal');
-    const btnCloseModal = document.getElementById('btnCloseModal');
+  const tg = window.Telegram && window.Telegram.WebApp
+    ? window.Telegram.WebApp
+    : null;
 
-    async function fetchRealFiles() {
-      try {
-        document.getElementById('statusMessage').textContent = "🔄 Sincronizando...";
-        
-        // Se añade un parámetro de tiempo (?t=...) y no-store para evitar caché en Telegram
-        const response = await fetch(`/api/files?t=${new Date().getTime()}`, {
-          cache: "no-store"
-        });
-        
-        if (!response.ok) throw new Error("Error al conectar con la API");
+  if (tg) {
+    tg.ready();
+    tg.expand();
+  }
 
-        const data = await response.json();
-        filesData = data;
-        updateUI();
-        document.getElementById('statusMessage').textContent = "✅ Sincronizado con Telegram";
-      } catch (err) {
-        console.error("Error al cargar archivos:", err);
-        document.getElementById('statusMessage').textContent = "⚠️ No se pudo cargar la biblioteca.";
+  let telegramUserId = null;
+  let filesData = { photos: [], videos: [], documents: [], audios: [] };
+  let activeCategory = null;
+  const selected = new Map();
+
+  const $ = id => document.getElementById(id);
+
+  function setStatus(message, type = "") {
+    $("status").textContent = message;
+    $("status").className = "status " + type;
+  }
+
+  function getTelegramUserId() {
+    // El ID se obtiene del contexto de Telegram, no de un nombre visible.
+    const user = tg && tg.initDataUnsafe ? tg.initDataUnsafe.user : null;
+    return user && user.id ? String(user.id) : null;
+  }
+
+  async function requestJSON(url, options = {}) {
+    const response = await fetch(url, {
+      cache: "no-store",
+      ...options,
+      headers: {
+        ...(options.headers || {})
       }
-    }
-
-    function updateUI() {
-      let totalCount = 0;
-      let totalWeightNum = 0;
-
-      ['photos', 'videos', 'documents', 'audios'].forEach(cat => {
-        const arr = filesData[cat] || [];
-        document.getElementById(`count-${cat}`).textContent = arr.length;
-        totalCount += arr.length;
-        arr.forEach(f => totalWeightNum += Number(f.size || 0));
-      });
-
-      document.getElementById('totalFound').textContent = totalCount;
-      document.getElementById('totalWeight').textContent = totalWeightNum.toFixed(1) + ' MB';
-
-      if (activeCategory) {
-        renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
-      }
-    }
-
-    categoryButtons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const categoryKey = btn.getAttribute('data-category');
-        if (activeCategory === categoryKey) {
-          fileExplorer.classList.remove('visible');
-          btn.classList.remove('active');
-          activeCategory = null;
-          return;
-        }
-
-        categoryButtons.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-
-        activeCategory = categoryKey;
-        explorerCategoryTitle.textContent = `Archivos en: ${btn.textContent.trim().split(' ')[1]}`;
-        fileSearchInput.value = '';
-        renderFileList(filesData[categoryKey] || []);
-        fileExplorer.classList.add('visible');
-      });
     });
 
-    function renderFileList(filesArray, filterText = '') {
-      fileListContainer.innerHTML = '';
-      const filtered = filesArray.filter(file => file.name.toLowerCase().includes(filterText.toLowerCase()));
+    const contentType = response.headers.get("content-type") || "";
+    const body = await response.text();
 
-      if (filtered.length === 0) {
-        fileListContainer.innerHTML = `<div style="font-size: 0.8rem; color: #94a3b8; text-align: center; padding: 10px;">No hay archivos en esta categoría</div>`;
+    if (!contentType.includes("application/json")) {
+      throw new Error(
+        "El servidor devolvió una página en vez de JSON (HTTP " +
+        response.status + "). Comprueba la API y los permisos CORS."
+      );
+    }
+
+    let data;
+    try {
+      data = JSON.parse(body);
+    } catch {
+      throw new Error("La respuesta del servidor no es JSON válido.");
+    }
+
+    if (!response.ok) {
+      throw new Error(data.error || ("Error HTTP " + response.status));
+    }
+
+    if (data.error) throw new Error(data.error);
+    return data;
+  }
+
+  async function loadFiles() {
+    telegramUserId = getTelegramUserId();
+
+    if (!telegramUserId) {
+      setStatus("⚠️ No se detectó tu usuario de Telegram.", "error");
+      $("notice").textContent =
+        "Abre la Mini App desde el botón de menú de tu bot, dentro de Telegram. No desde el navegador.";
+      return;
+    }
+
+    setStatus("🔄 Cargando archivos de Telegram...");
+
+    try {
+      const url = API + "/api/files?user_id=" +
+        encodeURIComponent(telegramUserId) +
+        "&t=" + Date.now();
+
+      const data = await requestJSON(url);
+
+      for (const cat of CATEGORIES) {
+        filesData[cat] = Array.isArray(data[cat]) ? data[cat] : [];
+      }
+
+      // Quitar selecciones de archivos que ya no estén en la biblioteca.
+      const validIds = new Set(
+        CATEGORIES.flatMap(cat => filesData[cat].map(f => String(f.id)))
+      );
+
+      for (const id of selected.keys()) {
+        if (!validIds.has(String(id))) selected.delete(id);
+      }
+
+      updateUI();
+      setStatus("✅ Biblioteca sincronizada.", "ok");
+      $("notice").textContent = "Archivos cargados desde tu cuenta de Telegram.";
+    } catch (error) {
+      console.error("ArchiveBot Pro:", error);
+      setStatus("⚠️ " + error.message, "error");
+      $("notice").textContent =
+        "Si aparece un error de CORS, hay que permitir el dominio de GitHub Pages en el backend de Render.";
+    }
+  }
+
+  function allFiles() {
+    return CATEGORIES.flatMap(cat => filesData[cat]);
+  }
+
+  function updateUI() {
+    let count = 0;
+    let totalMB = 0;
+
+    for (const cat of CATEGORIES) {
+      const arr = filesData[cat];
+      $("count-" + cat).textContent = arr.length;
+      count += arr.length;
+      arr.forEach(f => totalMB += Number(f.size || 0));
+    }
+
+    $("totalFound").textContent = count;
+    $("totalWeight").textContent = totalMB.toFixed(2) + " MB";
+    updateSelectionSummary();
+
+    if (activeCategory) renderFiles();
+  }
+
+  function updateSelectionSummary() {
+    let size = 0;
+    selected.forEach(f => size += Number(f.size || 0));
+    $("selectedCount").textContent = selected.size;
+    $("selectedSize").textContent = size.toFixed(2) + " MB";
+    $("downloadZip").disabled = selected.size === 0;
+  }
+
+  document.querySelectorAll(".cat").forEach(button => {
+    button.addEventListener("click", () => {
+      const cat = button.dataset.cat;
+
+      if (activeCategory === cat) {
+        activeCategory = null;
+        $("explorer").classList.remove("show");
+        button.classList.remove("active");
         return;
       }
 
-      filtered.forEach(file => {
-        const isChecked = selectedFilesMap.has(file.id);
-        const item = document.createElement('div');
-        item.className = 'file-item';
-        item.innerHTML = `
-          <input type="checkbox" class="file-checkbox" value="${file.id}" ${isChecked ? 'checked' : ''} />
-          <div class="file-info">
-            <span class="file-name" title="${file.name}">${file.name}</span>
-            <span class="file-size">${file.size} MB</span>
-          </div>
-        `;
+      document.querySelectorAll(".cat").forEach(b => b.classList.remove("active"));
+      button.classList.add("active");
+      activeCategory = cat;
+      $("explorerTitle").textContent = LABELS[cat];
+      $("search").value = "";
+      $("explorer").classList.add("show");
+      renderFiles();
+    });
+  });
 
-        const checkbox = item.querySelector('.file-checkbox');
-        checkbox.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (checkbox.checked) {
-            selectedFilesMap.set(file.id, { name: file.name, size: file.size });
-          } else {
-            selectedFilesMap.delete(file.id);
-          }
-          updateGlobalSummary();
-        });
+  function renderFiles() {
+    const container = $("fileList");
+    container.replaceChildren();
 
-        item.querySelector('.file-info').addEventListener('click', () => {
-          openFileModal(file);
-        });
+    const query = $("search").value.trim().toLowerCase();
+    const files = (filesData[activeCategory] || []).filter(f =>
+      String(f.name || "").toLowerCase().includes(query)
+    );
 
-        fileListContainer.appendChild(item);
+    if (!files.length) {
+      const empty = document.createElement("div");
+      empty.className = "empty";
+      empty.textContent = query
+        ? "No hay archivos que coincidan con la búsqueda."
+        : "No hay archivos en esta categoría.";
+      container.appendChild(empty);
+      return;
+    }
+
+    files.forEach(file => {
+      const id = String(file.id);
+      const row = document.createElement("div");
+      row.className = "file-item";
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.checked = selected.has(id);
+      checkbox.setAttribute("aria-label", "Seleccionar " + (file.name || "archivo"));
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selected.set(id, {
+            id: file.id,
+            name: file.name,
+            size: file.size
+          });
+        } else {
+          selected.delete(id);
+        }
+        updateSelectionSummary();
       });
-    }
 
-    function openFileModal(file) {
-      document.getElementById('modalFileName').textContent = file.name;
-      document.getElementById('modalFileId').textContent = file.id || 'N/A';
-      document.getElementById('modalFileCategory').textContent = activeCategory ? activeCategory.toUpperCase() : 'N/A';
-      document.getElementById('modalFileSize').textContent = `${file.size} MB`;
-      document.getElementById('modalFileMime').textContent = file.mime || 'Desconocido';
-      document.getElementById('modalFileDate').textContent = file.date || 'Reciente';
+      const info = document.createElement("div");
+      info.className = "file-info";
 
-      fileModal.classList.add('active');
-    }
+      const name = document.createElement("div");
+      name.className = "file-name";
+      name.textContent = file.name || "Archivo sin nombre";
 
-    btnCloseModal.addEventListener('click', () => {
-      fileModal.classList.remove('active');
+      const size = document.createElement("div");
+      size.className = "file-size";
+      size.textContent = Number(file.size || 0).toFixed(2) + " MB";
+
+      info.append(name, size);
+
+      const detail = document.createElement("button");
+      detail.className = "detail-btn";
+      detail.textContent = "Info";
+      detail.addEventListener("click", () => showDetails(file, activeCategory));
+
+      row.append(checkbox, info, detail);
+      container.appendChild(row);
     });
+  }
 
-    btnRefresh.addEventListener('click', () => {
-      fetchRealFiles();
-    });
+  function showDetails(file, category) {
+    $("modalName").textContent = file.name || "Archivo";
+    $("modalId").textContent = file.id ?? "—";
+    $("modalCat").textContent = LABELS[category] || category;
+    $("modalSize").textContent = Number(file.size || 0).toFixed(2) + " MB";
+    $("modalMime").textContent = file.mime || "Desconocido";
+    $("modalDate").textContent = file.date || "—";
+    $("overlay").classList.add("show");
+  }
 
-    fileSearchInput.addEventListener('input', (e) => {
-      if (!activeCategory) return;
-      renderFileList(filesData[activeCategory] || [], e.target.value);
-    });
+  $("closeModal").addEventListener("click", () =>
+    $("overlay").classList.remove("show")
+  );
 
-    document.getElementById('selectAllCategory').addEventListener('click', () => {
-      if (!activeCategory) return;
-      (filesData[activeCategory] || []).forEach(file => {
-        selectedFilesMap.set(file.id, { name: file.name, size: file.size });
+  $("overlay").addEventListener("click", event => {
+    if (event.target === $("overlay")) $("overlay").classList.remove("show");
+  });
+
+  $("search").addEventListener("input", renderFiles);
+  $("refresh").addEventListener("click", loadFiles);
+
+  $("selectAll").addEventListener("click", () => {
+    if (!activeCategory) return;
+
+    (filesData[activeCategory] || []).forEach(file => {
+      selected.set(String(file.id), {
+        id: file.id,
+        name: file.name,
+        size: file.size
       });
-      renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
-      updateGlobalSummary();
     });
 
-    document.getElementById('deselectAllCategory').addEventListener('click', () => {
-      if (!activeCategory) return;
-      (filesData[activeCategory] || []).forEach(file => {
-        selectedFilesMap.delete(file.id);
+    renderFiles();
+    updateSelectionSummary();
+  });
+
+  $("deselectAll").addEventListener("click", () => {
+    if (!activeCategory) return;
+
+    (filesData[activeCategory] || []).forEach(file =>
+      selected.delete(String(file.id))
+    );
+
+    renderFiles();
+    updateSelectionSummary();
+  });
+
+  $("downloadZip").addEventListener("click", async () => {
+    if (!telegramUserId) {
+      setStatus("Abre la aplicación desde Telegram.", "error");
+      return;
+    }
+
+    if (!selected.size) {
+      setStatus("Selecciona al menos un archivo.", "error");
+      return;
+    }
+
+    const button = $("downloadZip");
+    button.disabled = true;
+    setStatus("📦 Preparando tu ZIP...");
+
+    try {
+      const response = await fetch(API + "/api/zip", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: telegramUserId,
+          ids: Array.from(selected.values()).map(f => f.id)
+        })
       });
-      renderFileList(filesData[activeCategory] || [], fileSearchInput.value);
-      updateGlobalSummary();
-    });
 
-    function updateGlobalSummary() {
-      let count = selectedFilesMap.size;
-      let totalMB = 0;
-      selectedFilesMap.forEach(file => { totalMB += Number(file.size || 0); });
-      document.getElementById('selectedCount').textContent = count;
-      document.getElementById('selectedSize').textContent = totalMB.toFixed(1);
+      if (!response.ok) {
+        const type = response.headers.get("content-type") || "";
+        let message = "No se pudo crear el ZIP (HTTP " + response.status + ").";
+
+        if (type.includes("application/json")) {
+          const errorData = await response.json();
+          message = errorData.error || message;
+        } else {
+          message += " Comprueba la configuración CORS del backend.";
+        }
+
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const objectURL = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = objectURL;
+      link.download = "ArchiveBot_Pro.zip";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      setTimeout(() => URL.revokeObjectURL(objectURL), 60000);
+      setStatus("✅ ZIP preparado.", "ok");
+
+      if (tg && tg.showAlert) {
+        tg.showAlert("El ZIP se ha preparado. Si no aparece en Descargas, revisa el navegador de Telegram.");
+      }
+    } catch (error) {
+      console.error(error);
+      setStatus("⚠️ " + error.message, "error");
+    } finally {
+      button.disabled = selected.size === 0;
     }
+  });
 
-    if (window.Telegram && window.Telegram.WebApp) {
-      window.Telegram.WebApp.ready();
-      window.Telegram.WebApp.expand();
-    }
-
-    fetchRealFiles();
-  </script>
+  updateSelectionSummary();
+  loadFiles();
+})();
+</script>
 </body>
 </html>
