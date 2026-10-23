@@ -167,6 +167,9 @@ def save_file(
                 )
             )
         connection.commit()
+        logger.info(f"💾 Archivo guardado/actualizado en SQLite: {name} [{category}]")
+    except Exception as e:
+        logger.error(f"❌ Error al guardar en SQLite: {e}")
     finally:
         connection.close()
 
@@ -214,7 +217,7 @@ def get_files():
         return jsonify(global_library)
     except Exception as e:
         logger.error(f"Error en /api/files: {e}")
-        return jsonify({"error": strStr(e) if 'strStr' in globals() else str(e)}), 500
+        return jsonify({"error": str(e)}), 500
     finally:
         connection.close()
 
@@ -235,7 +238,6 @@ def get_single_file(file_id):
         if not BOT_TOKEN:
             return jsonify({"error": "Falta configurar el token del bot."}), 500
 
-        # Obtener ruta de Telegram
         url_info = f"https://api.telegram.org/bot{BOT_TOKEN}/getFile?file_id={tg_file_id}"
         req = urllib.request.urlopen(url_info)
         res_data = json.loads(req.read().decode('utf-8'))
@@ -246,7 +248,6 @@ def get_single_file(file_id):
         file_path = res_data["result"]["file_path"]
         telegram_file_url = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_path}"
 
-        # Descargar el contenido en memoria para entregarlo al cliente
         with urllib.request.urlopen(telegram_file_url) as file_resp:
             file_bytes = file_resp.read()
 
@@ -344,7 +345,7 @@ def run_telegram_bot():
     @bot.message_handler(content_types=['photo', 'document', 'video', 'audio', 'voice'])
     def handle_user_files(message):
         try:
-            user_id = message.chat.id
+            user_id = message.from_user.id if message.from_user else message.chat.id
             file_id = ""
             file_unique_id = ""
             file_name = "archivo_sin_nombre"
@@ -376,7 +377,7 @@ def run_telegram_bot():
                 vid = message.video
                 file_id = vid.file_id
                 file_unique_id = getattr(vid, 'file_unique_id', '')
-                file_name = getattr(vid, 'name', None) or f"video_{file_unique_id[:8]}.mp4"
+                file_name = getattr(vid, 'file_name', None) or f"video_{file_unique_id[:8]}.mp4"
                 size_bytes = getattr(vid, 'file_size', 102400) or 102400
                 file_mime = getattr(vid, 'mime_type', 'video/mp4')
 
