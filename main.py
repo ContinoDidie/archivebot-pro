@@ -26,7 +26,7 @@ def health_check():
 
 @app.route('/api/files', methods=['GET'])
 def get_files():
-    # Biblioteca unificada que junta todos los archivos de cualquier usuario para la MiniApp
+    # Biblioteca global unificada
     global_library = {
         "photos": [],
         "videos": [],
@@ -34,13 +34,17 @@ def get_files():
         "audios": []
     }
     
+    # Recorremos absolutamente todas las claves del diccionario de memoria
     for uid, categories in user_files_database.items():
-        for cat in ["photos", "videos", "documents", "audios"]:
-            if cat in categories:
-                for file in categories[cat]:
-                    if not any(f['name'] == file['name'] for f in global_library[cat]):
-                        global_library[cat].append(file)
-                        
+        if isinstance(categories, dict):
+            for cat in ["photos", "videos", "documents", "audios"]:
+                if cat in categories and isinstance(categories[cat], list):
+                    for file in categories[cat]:
+                        # Evitamos duplicados por nombre
+                        if not any(f.get('name') == file.get('name') for f in global_library[cat]):
+                            global_library[cat].append(file)
+                            
+    logger.info(f"API /api/files consultada. Fotos: {len(global_library['photos'])}, Videos: {len(global_library['videos'])}, Documentos: {len(global_library['documents'])}, Audios: {len(global_library['audios'])}")
     return jsonify(global_library)
 
 
